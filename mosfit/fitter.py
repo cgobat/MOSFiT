@@ -706,8 +706,15 @@ class Fitter(object):
                         new_val = output.get(key, [])
                         new_val = all_to_list(new_val)
                         extras.setdefault(key, []).append(new_val)
-                for i in range(len(output['times'])):
+                valid_out = output.get('valid_mask', None)
+                if valid_out is not None:
+                    valid_out = np.asarray(valid_out, dtype=bool)
+                n_times = len(output['times'])
+                for i in range(n_times):
                     if not np.isfinite(output['model_observations'][i]):
+                        continue
+                    if (valid_out is not None and len(valid_out) == n_times
+                            and not valid_out[i]):
                         continue
                     photodict = {
                         PHOTOMETRY.TIME:
