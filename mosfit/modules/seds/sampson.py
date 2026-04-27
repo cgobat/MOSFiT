@@ -11,6 +11,7 @@ This class:
 """
 
 from math import pi
+from pathlib import Path
 import numpy as np
 import torch
 
@@ -71,18 +72,11 @@ class SimpleFluxMLP(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-# User-adjustable paths
+# Package-relative paths (portable across machines/install locations)
 # ---------------------------------------------------------------------------
-
-NORMALIZATION_STATS_PATH = (
-    "/n/home07/kyadavalli/kyadavalli/installed_packages/MOSFiT/"
-    "mosfit/modules/seds/normalization_stats_tmin4_tmax60_N15.pt"
-)
-
-EMULATOR_WEIGHTS_PATH = (
-    "/n/home07/kyadavalli/kyadavalli/installed_packages/MOSFiT/"
-    "mosfit/modules/seds/emulator.pth"
-)
+_THIS_DIR = Path(__file__).resolve().parent
+NORMALIZATION_STATS_PATH = str(_THIS_DIR / "normalization_stats_tmin4_tmax60_N15.pt")
+EMULATOR_WEIGHTS_PATH = str(_THIS_DIR / "emulator.pth")
 
 # ---------------------------------------------------------------------------
 # SED implementation
