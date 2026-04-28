@@ -101,7 +101,6 @@ class Sampson(SED):
     # 602 -> indices 0,15,...,600 → 41 points.
     _orig_wav_grid = np.linspace(2000.0 + 200.0, 10000.0 - 300.0, 602)
     fixed_wav_grid = _orig_wav_grid[::15]  # length 41
-    _debug_call_count = 0
 
     # Shared state
     mean_std_dict = None
@@ -114,8 +113,6 @@ class Sampson(SED):
         super().__init__(*args, **kwargs)
 
         if not Sampson._loaded:
-            print("Loading Sampson emulator on device:", Sampson.device)
-
             # ------------------------------------------------------------------
             # Load normalization statistics (mean/std for descriptor, time, flux)
             # ------------------------------------------------------------------
@@ -178,21 +175,6 @@ class Sampson(SED):
             Sampson.model.eval()
             torch.set_grad_enabled(False)
 
-            def _safe_scalar(v):
-                """Convert tensor or float to a printable Python scalar."""
-                if torch.is_tensor(v):
-                    return float(v.cpu())
-                return float(v)
-
-            print("=== NORMALIZATION STATS (printed once) ===")
-            print("descriptor_mean:", msd["descriptor_mean"].cpu().numpy())
-            print("descriptor_std: ", msd["descriptor_std"].cpu().numpy())
-            print("time_mean:      ", _safe_scalar(msd["time_mean"]))
-            print("time_std:       ", _safe_scalar(msd["time_std"]))
-            print("fluxes_mean:    ", _safe_scalar(msd["fluxes_mean"]))
-            print("fluxes_std:     ", _safe_scalar(msd["fluxes_std"]))
-
-
             Sampson._loaded = True
 
     def process(self, **kwargs):
@@ -213,14 +195,6 @@ class Sampson(SED):
 
         # Rest-frame time since explosion in days (what the emulator was trained on)
         t_rest = (obs_times - texp) / (1.0 + z)
-
-        if torch.is_tensor(texp):
-            texp_val = float(texp)
-        else:
-            texp_val = texp
-        #print("DEBUG Sampson.py: min(obs_times), max(obs_times) =", obs_times.min(), obs_times.max())
-        #print("DEBUG Sampson.py: texp =", texp_val, "z =", float(z))
-        #print("DEBUG Sampson.py: min(t_rest), max(t_rest) =", t_rest.min(), t_rest.max())
 
         self._times = t_rest    # use this as the "time axis" for the emulator
 
@@ -315,36 +289,6 @@ class Sampson(SED):
             (unique_times <= Sampson.EMULATOR_T_MAX)
         )
 
-        Sampson._debug_call_count += 1
-        if Sampson._debug_call_count <= 3:   # only print first 3 calls
-            print(f"\n=== EMULATOR INPUT (call #{Sampson._debug_call_count}) ===")
-            print("unnorm_descriptor:", unnorm_descriptor.cpu().numpy())
-            print("  eta_vel  =", float(self._eta_vel))
-            print("  eta_he   =", float(self._eta_he))
-            print("  eta_ni   =", float(self._eta_ni))
-            print("  eta_op   =", float(self._eta_op))
-            print("  min_vel  =", float(self._min_vel), " (training units?)")
-            print("  del_vel  =", float(self._del_vel), " (training units?)")
-            print("  m_he     =", float(self._mhe),     " (training units?)")
-            print("  m_ni     =", float(self._mni),     " (training units?)")
-            print("  m_op     =", float(self._mop),     " (training units?)")
-            print("norm_descriptor:  ", norm_descriptor.cpu().numpy())
-            print("t_rest (days):    ", unique_times[:5], "...")
-            print("norm_times:       ", norm_times_t.squeeze().cpu().numpy()[:5], "...")
-
-            # Also print first predicted flux to check magnitude
-            if np.any(valid_query_mask):
-                with torch.no_grad():
-                    test_out = (Sampson.model(input_batch[valid_query_mask][:1]) 
-                            * msd["fluxes_std"] + msd["fluxes_mean"])
-                    test_flux = 10.0 ** test_out
-                print("pred log10(flux) at t=first valid time:", 
-                    test_out[0, 20].item(), "(middle wavelength)")
-                print("pred flux at t=first valid time:       ", 
-                    test_flux[0, 20].item(), "(middle wavelength)")
-                print("wavelength at index 20:                ", 
-                    Sampson.fixed_wav_grid[20], "Angstrom")
-
         if np.any(valid_query_mask):
             valid_input = input_batch[valid_query_mask]
             with torch.no_grad():
@@ -384,13 +328,6 @@ class Sampson(SED):
             # mark whether this point is inside emulator's training window
             if Sampson.EMULATOR_T_MIN <= dense_time <= Sampson.EMULATOR_T_MAX:
                 valid_mask[li] = True
-
-            # After building valid_mask in sampson.py process():
-            n_valid = valid_mask.sum()
-            n_total = len(valid_mask)
-            '''print(f"DEBUG: {n_valid}/{n_total} points inside valid window [4,60] days")
-            if n_valid == 0:
-                print("WARNING: NO VALID POINTS — emulator being called at wrong times!")'''
 
             # Rest-frame wavelengths for this band
             if bi >= 0:
