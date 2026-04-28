@@ -306,7 +306,9 @@ class Sampson(SED):
                 flux_by_dense_index[ti] = pred_fluxes_valid_np[valid_idx]
                 valid_idx += 1
             else:
-                flux_by_dense_index[ti] = np.full(len(Sampson.fixed_wav_grid), 1e-40)
+                flux_by_dense_index[ti] = np.full(
+                    len(Sampson.fixed_wav_grid), np.nan
+                )
 
         # ----------------------------------------------------------------------
         # Build SEDs at each requested (time, band)
@@ -357,11 +359,9 @@ class Sampson(SED):
         # ----------------------------------------------------------------------
 
 
-        seds = np.asarray(seds)
-        seds = np.nan_to_num(seds, nan=0.0, posinf=0.0, neginf=0.0)
-        seds[seds < 0] = 0.0
-        floor = 1e-40
-        seds[seds == 0.0] = floor
+        seds = np.asarray(seds, dtype=float)
+        seds[~np.isfinite(seds)] = np.nan
+        seds[seds <= 0.0] = np.nan
 
         seds = self.add_to_existing_seds(seds, **kwargs)
 
