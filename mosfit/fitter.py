@@ -350,7 +350,8 @@ class Fitter(object):
                             'band_list': band_list,
                             'band_systems': band_systems,
                             'band_instruments': band_instruments,
-                            'band_bandsets': band_bandsets
+                            'band_bandsets': band_bandsets,
+                            'limit_fitting_mjds': limit_fitting_mjds,
                         }
                         self._event_data = self.generate_dummy_data(**gen_args)
 
@@ -873,15 +874,27 @@ class Fitter(object):
                             band_list=[],
                             band_systems=[],
                             band_instruments=[],
-                            band_bandsets=[]):
-        """Generate simulated data based on priors."""
+                            band_bandsets=[],
+                            limit_fitting_mjds=False):
+        """Generate simulated data based on priors.
+
+        Without a real event file, photometry times must sit in the same units
+        the transient module expects. If ``--limit-fitting-mjds`` is set, dummy
+        points use that MJD window; otherwise times are 0–``max_time`` days.
+        """
         # Just need 2 plot points for beginning and end.
         plot_points = 2
 
-        times = list(
-            sorted(
-                set(list(np.linspace(0.0, max_time, plot_points)) +
-                    time_list)))
+        tl = listify(time_list)
+        if (limit_fitting_mjds is not False and limit_fitting_mjds is not None
+                and len(listify(limit_fitting_mjds)) >= 2):
+            lf = listify(limit_fitting_mjds)
+            lo, hi = float(lf[0]), float(lf[1])
+            base_times = list(np.linspace(lo, hi, plot_points))
+        else:
+            base_times = list(np.linspace(0.0, max_time, plot_points))
+
+        times = list(sorted(set(base_times + tl)))
         band_list_all = ['V'] if len(band_list) == 0 else band_list
         times = np.repeat(times, len(band_list_all))
 
