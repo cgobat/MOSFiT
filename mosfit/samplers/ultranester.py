@@ -1,7 +1,6 @@
 # -*- coding: UTF-8 -*-
 """Definitions for `UltraNester` class."""
 
-import numpy as np
 from astrocats.catalog.model import MODEL
 from astrocats.catalog.quantity import QUANTITY
 from mosfit.samplers.sampler import Sampler
@@ -31,22 +30,6 @@ class UltraNester(Sampler):
         self._upload_model = None
         self._ntemps = 1
         self._nwalkers = self._num_walkers
-
-    def _get_best_kmat(self):
-        """Get the kernel matrix associated with best current scoring model."""
-        max_like_index = np.argmax(self._results['weighted_samples']['logl'])
-        max_like_point = self._results['weighted_samples']['points'][max_like_index, :]
-        sout = self._model.run_stack(max_like_point, root='objective')
-
-        kmat = sout.get('kmat')
-        kdiag = sout.get('kdiagonal')
-        variance = sout.get('obandvs', sout.get('variance'))
-        if kdiag is not None and kmat is not None:
-            kmat[np.diag_indices_from(kmat)] += kdiag
-        elif kdiag is not None and kmat is None:
-            kmat = np.diag(kdiag + variance)
-
-        return kmat
 
     def append_output(self, modeldict):
         """Append output from the nester to the model description."""

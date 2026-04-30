@@ -233,12 +233,10 @@ class Ensembler(Sampler):
         tft = 0.0  # Total self._fracking time
         sli = 1.0  # Keep track of how many times chain halved
         s_exception = None
-        kmat = None
         ages = np.zeros((self._ntemps, self._nwalkers), dtype=int)
         oldp = self._p
 
         max_chunk = 1000
-        kmat_chunk = 5
         iter_chunks = int(np.ceil(float(self._iterations) / max_chunk))
         iter_arr = [max_chunk if xi < iter_chunks - 1 else
                     self._iterations - max_chunk * (iter_chunks - 1)
@@ -441,25 +439,12 @@ class Ensembler(Sampler):
                                  self._emi % self._frack_step == 0)
 
                     self._scores = [np.array(x) for x in self._lnprob]
-                    if emim1 % kmat_chunk == 0:
-                        sout = self._model.run_stack(
-                            self._p[np.unravel_index(
-                                np.argmax(self._lnprob), self._lnprob.shape)],
-                            root='objective')
-                        kmat = sout.get('kmat')
-                        kdiag = sout.get('kdiagonal')
-                        variance = sout.get('obandvs', sout.get('variance'))
-                        if kdiag is not None and kmat is not None:
-                            kmat[np.diag_indices_from(kmat)] += kdiag
-                        elif kdiag is not None and kmat is None:
-                            kmat = np.diag(kdiag + variance)
                     prt.status(
                         self,
                         desc='fracking' if frack_now else
                         ('burning' if self._emi < self._burn_in
                          else 'walking'),
                         scores=self._scores,
-                        kmat=kmat,
                         accepts=accepts,
                         iterations=[self._emi, None if
                                     self._cc is not None else
@@ -522,7 +507,6 @@ class Ensembler(Sampler):
                         self,
                         desc='fracking_results',
                         scores=self._scores,
-                        kmat=kmat,
                         fracking=True,
                         iterations=[self._emi, None if
                                     self._cc is not None else

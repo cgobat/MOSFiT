@@ -14,10 +14,9 @@ from collections import OrderedDict
 from textwrap import fill
 
 import numpy as np
-from scipy import ndimage
 
-from .utils import (calculate_WAIC, congrid, is_integer, is_number,
-                    open_atomic, pretty_num, rebin)
+from .utils import (calculate_WAIC, is_integer, is_number, open_atomic,
+                    pretty_num)
 
 if sys.version_info[:2] < (3, 3):
     old_print = print  # noqa
@@ -566,27 +565,6 @@ class Printer(object):
         outarr.extend(messages)
 
         kmat_extra = 0
-        if kmat is not None and kmat.shape[0] > 1:
-            smat = ndimage.filters.gaussian_filter(
-                kmat, 0.1 * len(kmat) / 7.0, mode='nearest', truncate=2.0)
-            try:
-                kmat_scaled = congrid(smat, (14, 7), minusone=True,
-                                      bounds_error=True)
-            except Exception:
-                kmat_scaled = rebin(smat, (14, 7))
-            kmat_scaled = np.log(kmat_scaled)
-            kmat_scaled /= np.max(kmat_scaled) - np.min(kmat_scaled)
-            kmat_pers = [np.percentile(kmat_scaled, x) for x in (20, 50, 80)]
-            kmat_dimi = range(len(kmat_scaled))
-            kmat_dimj = range(len(kmat_scaled[0]))
-            doodle = '\n╔' + ('═' * len(kmat_scaled)) + '╗   \n'
-            doodle += '║' + '║   \n║'.join(
-                [''.join([self.ascii_fill(kmat_scaled[i, j], kmat_pers)
-                          for i in kmat_dimi]) for j in kmat_dimj]) + '║'
-            doodle += '\n╚' + ('═' * len(kmat_scaled)) + '╝   '
-            doodle = doodle.splitlines()
-
-            kmat_extra = len(doodle[-1])
 
         line = ''
         lines = ''
@@ -601,17 +579,6 @@ class Printer(object):
                 line = item
 
         lines = lines + '\n' + line
-
-        if kmat is not None and kmat.shape[0] > 1:
-            lines = self._lines(lines)
-            loff = int(np.floor((len(kmat_scaled[0]) - len(lines)) / 2.0)) + 2
-            for li, line in enumerate(doodle):
-                if li < loff:
-                    continue
-                elif li > loff + len(lines) - 1:
-                    break
-                doodle[li] += lines[li - loff]
-            lines = '\n'.join(doodle)
 
         self.prt(lines, colorify=True, inline=not make_space)
         sys.stdout.flush()
@@ -681,17 +648,6 @@ class Printer(object):
                             '├', '└') for ci, x in enumerate(line)])
             tree_str = '\n'.join(lines)
             self.prt(tree_str)
-
-    def ascii_fill(self, value, pers):
-        """Print a character based on range from 0 - 1."""
-        if np.isnan(value) or value < pers[0]:
-            return ' '
-        if np.isnan(value) or value < pers[1]:
-            return '.'
-        elif value < pers[2]:
-            return '*'
-        else:
-            return '#'
 
     def supports_color(self):
         """Return if current terminal supports color or not."""

@@ -19,26 +19,12 @@ class Kernel(Array):
         """Initialize module."""
         super(Kernel, self).__init__(**kwargs)
         self._times = np.array([])
-        self._codeltatime = -1
-        self._codeltalambda = -1
-        self._type = kwargs.get('type', False)
 
     def process(self, **kwargs):
         """Process module."""
         self.preprocess(**kwargs)
 
         ret = OrderedDict()
-
-        # If we are trying to krig between observations, we need an array with
-        # dimensions equal to the number of intermediate observations.
-        if self._type == 'full':
-            kskey = 'kfmat'
-        elif self._type == 'oa':
-            kskey = 'koamat'
-        elif self._type == 'ao':
-            kskey = 'kaomat'
-        else:
-            kskey = 'kmat'
 
         # Get band variances
         self._variance = kwargs.get(self.key('variance'), 0.0)
@@ -83,32 +69,8 @@ class Kernel(Array):
 
         self._o_band_vs = self._band_vs[self._observed]
 
-        if self._type == 'full':
-            self._band_vs_1 = self._band_vs
-            self._band_vs_2 = self._band_vs
-        elif self._type == 'oa':
-            self._band_vs_1 = self._o_band_vs
-            self._band_vs_2 = self._band_vs
-        elif self._type == 'ao':
-            self._band_vs_1 = self._band_vs
-            self._band_vs_2 = self._o_band_vs
-        else:
-            self._band_vs_1 = self._o_band_vs
-            self._band_vs_2 = self._o_band_vs
-
-        if self._codeltatime >= 0 or self._codeltalambda >= 0:
-            kmat = np.outer(self._band_vs_1, self._band_vs_2)
-
-            if self._codeltatime >= 0:
-                kmat *= np.exp(self._dt2mat / self._codeltatime**2)
-
-            if self._codeltalambda >= 0:
-                kmat *= np.exp(self._dl2mat / self._codeltalambda**2)
-
-            ret[kskey] = kmat
-        else:
-            ret['abandvs'] = self._band_vs
-            ret['obandvs'] = self._o_band_vs
+        ret['abandvs'] = self._band_vs
+        ret['obandvs'] = self._o_band_vs
 
         return ret
 
@@ -120,8 +82,6 @@ class Kernel(Array):
     def preprocess(self, **kwargs):
         """Construct kernel distance arrays."""
         new_times = np.array(kwargs.get('all_times', []), dtype=float)
-        self._codeltatime = kwargs.get(self.key('codeltatime'), -1)
-        self._codeltalambda = kwargs.get(self.key('codeltalambda'), -1)
         if np.array_equiv(new_times, self._times) and self._preprocessed:
             return
         self._times = new_times
@@ -145,38 +105,5 @@ class Kernel(Array):
         self._o_times = self._times[self._observed]
         self._o_waves = self._waves[self._observed]
         self._o_otypes = self._observation_types[self._observed]
-
-        if self._type == 'full':
-            self._times_1 = self._times
-            self._times_2 = self._times
-            self._waves_1 = self._waves
-            self._waves_2 = self._waves
-        elif self._type == 'oa':
-            self._times_1 = self._o_times
-            self._times_2 = self._times
-            self._waves_1 = self._o_waves
-            self._waves_2 = self._waves
-        elif self._type == 'ao':
-            self._times_1 = self._times
-            self._times_2 = self._o_times
-            self._waves_1 = self._waves
-            self._waves_2 = self._o_waves
-        else:
-            self._times_1 = self._o_times
-            self._times_2 = self._o_times
-            self._waves_1 = self._o_waves
-            self._waves_2 = self._o_waves
-
-        # Time deltas (radial distance) for covariance matrix.
-        if self._codeltatime >= 0:
-            self._dt2mat = self._times_1[:, None] - self._times_2[None, :]
-            self._dt2mat **= 2
-            self._dt2mat *= -0.5
-
-        # Wavelength deltas (radial distance) for covariance matrix.
-        if self._codeltalambda >= 0:
-            self._dl2mat = self._waves_1[:, None] - self._waves_2[None, :]
-            self._dl2mat **= 2
-            self._dl2mat *= -0.5
 
         self._preprocessed = True

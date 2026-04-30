@@ -18,34 +18,11 @@ Maximum likelihood analysis (MLA) is a simple way to include the error directly 
 
 But MLA is rather inflexible, in order to match a model to observations, it must (by construction) increase the variance for *all* observations simultaneously. For most models, this is probably overkill: the models likely deviate in *some* colors, at *some* times. What's more, MLA only allows for the white noise component of the error to expand to accomodate a model, in reality there's likely to be systematic offsets between models and data that leads to *covariant* errors.
 
-As of version 1.1.3, MLA is the default error model used in ``MOSFiT`` (it was previously Gaussian processes, which is described below).
+As of version 1.1.3, MLA is the default error model used in ``MOSFiT``.
 
-.. _gaussian:
+Gaussian-process residual fitting
+---------------------------------
 
-------------------
-Gaussian processes
-------------------
-
-Gaussian processes (GP) provides an error model that addresses these shortcomings of MLA. A white noise component, equivalent to MLA, is still included, but off-diagonal covariance is explicitly modeled by considering the "distance" between observations. To enable GP, the user should "release" the covariance variables using the release flag, ``-r covariance``. The kernel structure used is described below.
-
-.. _kernel:
-
-Kernel
-======
-
-The default kernel is chosen specifically to be ammenable to fitting photometric light curves. The kernel is constructed as a product of two exponential squared kernels, with the distance factors being the time of observation and the average wavelength of the filter used for the observation,
-
-.. math::
-
-    K_{ij} &= \sigma^2 K_{ij,t} K_{ij,\lambda} + {\rm diag}(\sigma_i^2)
-
-    K_{ij,t} &= \exp \left(-\frac{\left[t_i - t_j\right]^2}{2 l_{t}^2}\right)
-
-    K_{ij,\lambda} &= \exp \left(-\frac{\left[\lambda_i - \lambda_j\right]^2}{2 l_{\lambda}^2}\right)
-
-where :math:`\sigma` is the extra variance (analogous to the variance in MLA), :math:`\sigma_i` is the observation error of the :math:`i{\rm th}` observation, :math:`t` is the time of observation, and :math:`\lambda` is the mean wavelength of the observed band.
-
-Shortcomings
-============
-
-Gaussian processes can sometimes be too accomodating, explaining the entirety of the temporal evolution via random variation. Using the kernel described above, such a model match would present extremely long time and/or wavelength covariance lengths. This is often indicative that a given physical model is a poor representation of a given transient, or that a model is underconstrained (i.e. if the number of datapoints is comparable to the number of free parameters).
+Older versions of MOSFiT included an optional Gaussian-process residual model
+for off-diagonal covariance terms. This path has been removed, and MOSFiT now
+uses the diagonal variance treatment described above.

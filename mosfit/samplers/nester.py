@@ -39,24 +39,6 @@ class Nester(Sampler):
         self._upload_model = None
         self._ntemps = 1
 
-    def _get_best_kmat(self):
-        """Get the kernel matrix associated with best current scoring model."""
-        sout = self._model.run_stack(
-            self._results.samples[np.unravel_index(
-                np.argmax(self._results.logl),
-                self._results.logl.shape)],
-            root='objective')
-
-        kmat = sout.get('kmat')
-        kdiag = sout.get('kdiagonal')
-        variance = sout.get('obandvs', sout.get('variance'))
-        if kdiag is not None and kmat is not None:
-            kmat[np.diag_indices_from(kmat)] += kdiag
-        elif kdiag is not None and kmat is None:
-            kmat = np.diag(kdiag + variance)
-
-        return kmat
-
     def append_output(self, modeldict):
         """Append output from the nester to the model description."""
         modeldict[MODEL.SCORE] = {
@@ -149,13 +131,9 @@ class Nester(Sampler):
 
                 scales.append(sampler.results.scale)
 
-                kmat = self._get_best_kmat()
-                # The above added 1 call.
-                ncall += 1
-
                 self._e_logz = np.sqrt(logzvar)
                 prt.status(
-                    self, 'baseline', kmat=kmat,
+                    self, 'baseline',
                     iterations=[self._niter, iter_denom],
                     nc=ncall - ncall0, ncall=ncall, eff=eff,
                     logz=[self._logz, self._e_logz,
@@ -166,7 +144,7 @@ class Nester(Sampler):
 
             if max_iter >= 0:
                 prt.status(
-                    self, 'starting_batches', kmat=kmat,
+                    self, 'starting_batches',
                     iterations=[self._niter, iter_denom],
                     nc=ncall - ncall0, ncall=ncall, eff=eff,
                     logz=[self._logz, self._e_logz,
@@ -209,12 +187,8 @@ class Nester(Sampler):
 
                         self._results = sampler.results
 
-                        kmat = self._get_best_kmat()
-                        # The above added 1 call.
-                        ncall += 1
-
                         prt.status(
-                            self, 'batching', kmat=kmat,
+                            self, 'batching',
                             iterations=[self._niter, iter_denom],
                             batch=n, nc=ncall - ncall0, ncall=ncall, eff=eff,
                             logz=[self._logz, self._e_logz], loglstar=[
