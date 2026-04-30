@@ -203,7 +203,7 @@ class Fitter(object):
 
         # If the input is not a JSON file, assume it is either a path or that
         # it is the data from a single transient in tabular form.
-        self._converter = Converter(prt, require_source=False, guess=guess)
+        self._converter = Converter(prt, guess=guess)
         event_list = self._converter.generate_event_list(event_list)
 
         event_list = [x.replace('‑', '-') for x in event_list]

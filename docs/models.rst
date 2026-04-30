@@ -117,7 +117,7 @@ Now, change the range of allowed neutron star masses to something else:
         },
     }
 
-**Congratulations!** You have just modified your first MOSFiT model. It should be noted that even this very minor change, which affects the range of a single parameter, would generate a completely different model hash than the default model, distinguishing it from any other models that might have been uploaded by other users using the default settings.
+**Congratulations!** You have just modified your first MOSFiT model. Even a small prior change yields a distinct model fingerprint from the bundled default—which is desirable when you version or publish fits so others can verify which physics setup was run.
 
 You can also use more complex priors within the same file. For example:
 
