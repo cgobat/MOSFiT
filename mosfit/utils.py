@@ -147,13 +147,17 @@ def entabbed_json_dumps(string, **kwargs):
     return newstr
 
 
+def write_json_payload(f, payload):
+    """Write a string from ``entabbed_json_dumps`` (handles encoding edge cases)."""
+    try:
+        f.write(payload)
+    except UnicodeEncodeError:
+        f.write(payload.encode('ascii', 'replace').decode())
+
+
 def entabbed_json_dump(dic, f, **kwargs):
     """Write `entabbed_json_dumps` output to file handle."""
-    string = entabbed_json_dumps(dic, **kwargs)
-    try:
-        f.write(string)
-    except UnicodeEncodeError:
-        f.write(string.encode('ascii', 'replace').decode())
+    write_json_payload(f, entabbed_json_dumps(dic, **kwargs))
 
 
 def calculate_WAIC(scores):

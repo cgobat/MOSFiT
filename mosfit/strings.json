@@ -186,6 +186,5 @@
     "writing_complete": "Writing complete event...",
     "writing_extras": "Writing extra keys...",
     "writing_full_chain": "Writing full chain...",
-    "writing_model": "Writing model output...",
     "zeropoint": "\nNo zeropoint column available, please provide a zeropoint value for all the provided count (flux) data: "
 }

@@ -187,13 +187,17 @@ The paths of the various inputs and outputs are set by a few different options i
 
 By default, ``MOSFiT`` searches the local ``models`` folder copied to the run directory to find model JSON and their corresponding parameter JSON files to use for runs. If the user wishes to use custom parameter files for their runs instead, they can specify the paths to these files using the ``-P`` option.
 
-``MOSFiT`` outputs are always written to a local ``products`` directory, with the default filename being set to the name of the transient being fit (e.g. ``LSQ12dlf.json`` for LSQ12dlf). The user can append a suffix to the output filename using the ``-s`` option, e.g.:
+``MOSFiT`` outputs are always written to a local ``products`` directory. Without ``--quick-save``, canonical names are ``walkers.json``, ``extras.json`` (when ``-x`` is used), and ``chain.json`` (when ``-c`` is used)—no duplicate per-event filenames. With ``--quick-save``, filenames are prefixed with the transient being fit so multiple runs stay distinct (e.g. ``LSQ12dlf_walkers.json``).
+
+The ``-s`` option appends a suffix to ``--quick-save`` output filenames, e.g.:
 
 .. code-block:: bash
 
-    mosfit -e ./LSQ12dlf.json -m slsn -s mysuffix
+    mosfit -e ./LSQ12dlf.json -m slsn --quick-save -s mysuffix
 
-will write to the file ``LSQ12dlf-mysuffix.json``. A copy of the output will also always be dumped to ``walkers.json`` in the same directory. The same suffix will applied to any additional outputs requested by the user, such as the ``chain.json`` and ``extras.json`` files.
+includes ``mysuffix`` in those names (e.g. ``LSQ12dlf_walkers_mysuffix.json``).
+
+The MCMC chain, when requested with ``-c``, is written once as ``chain.json`` unless ``--quick-save`` is set, where it is ``<event>_chain[_suffix].json`` instead.
 
 .. _fixing:
 

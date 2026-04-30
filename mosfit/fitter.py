@@ -26,8 +26,8 @@ from mosfit.samplers.ensembler import Ensembler
 from mosfit.samplers.nester import Nester
 from mosfit.samplers.ultranester import UltraNester
 from mosfit.utils import (all_to_list, entabbed_json_dump, entabbed_json_dumps,
-                          flux_density_unit, frequency_unit, get_model_hash,
-                          listify, open_atomic, speak)
+                          flux_density_unit, frequency_unit, listify,
+                          open_atomic, speak, write_json_payload)
 
 from .model import Model
 
@@ -513,14 +513,6 @@ class Fitter(object):
         else:
             entry = Entry(name=self._event_name)
 
-        uentry = Entry(name=self._event_name)
-        data_keys = set()
-        for task in model._call_stack:
-            if model._call_stack[task]['kind'] == 'data':
-                data_keys.update(
-                    list(model._call_stack[task].get('keys', {}).keys()))
-        entryhash = entry.get_hash(keys=list(sorted(list(data_keys))))
-
         # Accumulate all the sources and add them to each entry.
         sources = []
         for root in model._references:
@@ -528,13 +520,6 @@ class Fitter(object):
                 sources.append(entry.add_source(**ref))
         sources.append(entry.add_source(**self._DEFAULT_SOURCE))
         source = ','.join(sources)
-
-        usources = []
-        for root in model._references:
-            for ref in model._references[root]:
-                usources.append(uentry.add_source(**ref))
-        usources.append(uentry.add_source(**self._DEFAULT_SOURCE))
-        usource = ','.join(usources)
 
         model_setup = OrderedDict()
         for ti, task in enumerate(model._call_stack):
@@ -553,12 +538,6 @@ class Fitter(object):
         self._sampler.prepare_output()
 
         self._sampler.append_output(modeldict)
-
-        umodeldict = deepcopy(modeldict)
-        umodeldict[MODEL.SOURCE] = usource
-        modelhash = get_model_hash(
-            umodeldict, ignore_keys=[MODEL.DATE, MODEL.SOURCE])
-        umodelnum = uentry.add_model(**umodeldict)
 
         modelnum = entry.add_model(**modeldict)
 
@@ -693,13 +672,6 @@ class Fitter(object):
                         compare_to_existing=False,
                         check_for_dupes=False,
                         **photodict)
-
-                    uphotodict = deepcopy(photodict)
-                    uphotodict[PHOTOMETRY.SOURCE] = umodelnum
-                    uentry.add_photometry(
-                        compare_to_existing=False,
-                        check_for_dupes=False,
-                        **uphotodict)
             else:
                 output = model.run_stack(x, root='objective')
 
@@ -743,17 +715,10 @@ class Fitter(object):
             realdict[REALIZATION.WEIGHT] = str(weights[xi])
             entry[ENTRY.MODELS][0].add_realization(
                 check_for_dupes=False, **realdict)
-            urealdict = deepcopy(realdict)
-            uentry[ENTRY.MODELS][0].add_realization(
-                check_for_dupes=False, **urealdict)
         prt.message('all_walkers_written', inline=True)
 
         entry.sanitize()
         oentry = {self._event_name: entry._ordered(entry)}
-        uentry.sanitize()
-        ouentry = {self._event_name: uentry._ordered(uentry)}
-
-        uname = '_'.join([self._event_name, entryhash, modelhash])
 
         if output_path and not os.path.exists(output_path):
             os.makedirs(output_path)
@@ -764,15 +729,12 @@ class Fitter(object):
         if write:
             prt.message('writing_complete')
             if not quick_save:
+                walkers_payload = entabbed_json_dumps(
+                    oentry, separators=(',', ':'))
                 with open_atomic(
                         os.path.join(model.get_products_path(), 'walkers.json'),
-                        'w') as flast, open_atomic(
-                            os.path.join(
-                                model.get_products_path(), self._event_name + (
-                                    ('_' + suffix) if suffix else '') + '.json'),
-                            'w') as feven:
-                    entabbed_json_dump(oentry, flast, separators=(',', ':'))
-                    entabbed_json_dump(oentry, feven, separators=(',', ':'))
+                        'w') as fwalk:
+                    write_json_payload(fwalk, walkers_payload)
             else:
                 with open_atomic(
                     os.path.join(model.get_products_path(), self._event_name + '_walkers' +
@@ -797,66 +759,36 @@ class Fitter(object):
                         pi = pi + 1
                 my_chain = my_chain.tolist()
                 my_chain.append(param_names)
+                chain_payload = entabbed_json_dumps(
+                    my_chain, separators=(',', ':'))
                 if not quick_save:
                     with open_atomic(
                             os.path.join(model.get_products_path(), 'chain.json'),
-                            'w') as flast, open_atomic(
-                                os.path.join(
-                                    model.get_products_path(),
-                                    self._event_name + '_chain' +
-                                    (('_' + suffix) if suffix else '') + '.json'),
-                                'w') as feven:
-                        entabbed_json_dump(
-                            my_chain,
-                            flast,
-                            separators=(',', ':'))
-                        entabbed_json_dump(
-                            my_chain,
-                            feven,
-                            separators=(',', ':'))
+                            'w') as fchain:
+                        write_json_payload(fchain, chain_payload)
                 else:
                     with open_atomic(os.path.join(model.get_products_path(),
                                     self._event_name + '_chain' +
                                     (('_' + suffix) if suffix else '') + '.json'),
                                 'w') as feven:
-                        entabbed_json_dump(
-                            my_chain,
-                            feven,
-                            separators=(',', ':'))
+                        write_json_payload(feven, chain_payload)
 
             if extra_outputs is not None:
                 prt.message('writing_extras')
                 if not quick_save:
+                    extras_payload = entabbed_json_dumps(
+                        extras, separators=(',', ':'))
                     with open_atomic(
-                            os.path.join(model.get_products_path(), 'extras.json'),
-                            'w') as flast, open_atomic(
-                                os.path.join(
-                                    model.get_products_path(),
-                                    self._event_name + '_extras' +
-                                    (('_' + suffix) if suffix else '') + '.json'),
-                                'w') as feven:
-                        if not quick_save:
-                            entabbed_json_dump(extras, flast, separators=(',', ':'))
-                        entabbed_json_dump(extras, feven, separators=(',', ':'))
+                            os.path.join(
+                                model.get_products_path(), 'extras.json'),
+                            'w') as fextra:
+                        write_json_payload(fextra, extras_payload)
                 else:
                     with open_atomic(os.path.join(model.get_products_path(),
                                     self._event_name + '_extras' +
                                     (('_' + suffix) if suffix else '') + '.json'),
                                 'w') as feven:
                         entabbed_json_dump(extras, feven, separators=(',', ':'))
-
-            if not quick_save:
-                prt.message('writing_model')
-                with open_atomic(
-                        os.path.join(model.get_products_path(), 'upload.json'),
-                        'w') as flast, open_atomic(
-                            os.path.join(
-                                model.get_products_path(), uname + (
-                                    ('_' + suffix) if suffix else '') + '.json'),
-                            'w') as feven:
-                    if not quick_save:
-                        entabbed_json_dump(ouentry, flast, separators=(',', ':'))
-                    entabbed_json_dump(ouentry, feven, separators=(',', ':'))
 
         if self._method == 'ultranest': #and self._sampler._sampler.mpi_size > 1:
             # send results to other MPI processes (above)
