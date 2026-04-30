@@ -567,7 +567,7 @@ def main():
 
     if args.generative:
         if args.iterations > 0:
-            prt.message('generative_supercedes', warning=True)
+            prt.message('generator_supercedes', warning=True)
         args.iterations = 0
 
     no_events = False
