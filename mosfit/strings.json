@@ -130,7 +130,7 @@
     "parser_cuda": "Enable CUDA for MOSFiT routines. Requires the `scikit-cuda` package (and its dependencies) to be installed.",
     "parser_download_recommended_data": "Downloads any recommended data from the Open Catalogs if not provided by the user (without prompting).",
     "parser_draw_above_likelihood": "When randomly drawing walkers initially, do not accept a draw unless a likelihood value is greater than this value. By default, any score greater than the likelihood floor will be retained.",
-    "parser_events": "List of event names (or file names) to be fit, delimited by spaces. If an event name contains a space, enclose the event's name in double quote marks, e.g. \"SDSS-II SN 5944\". Files with `.json` extensions are presumed to be in Open Catalog format, whereas files with any other extension will be read as a list of event names.",
+    "parser_events": "Space-delimited paths to inputs. Each must be an existing file: catalog-format JSON (typically `.json`) or an ASCII table for conversion. MOSFiT does not resolve transient names or download catalog JSON online. Paths with spaces must be quoted.",
     "parser_exclude_bands": "List of bands to exclude in fitting.",
     "parser_exclude_instruments": "List of instruments to exclude in fitting corresponding to the bands listed in `--exclude-bands`.",
     "parser_exclude_kinds": "List of kinds of observations to exclude when fitting. These are specified using keywords such as `radio` or `x-ray`.",

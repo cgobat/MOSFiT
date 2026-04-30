@@ -9,42 +9,33 @@ The primary purpose of ``MOSFiT`` is to fit models of transients to observed dat
 .. _public:
 
 -----------
-Public data
+Event data
 -----------
 
-``MOSFiT`` is deeply connected to the Open Catalogs (The Open Supernova Catalog, the Open Tidal Disruption Catalog, etc.), and the user can directly fit their model against any data provided by those catalogs. The Open Catalogs store names for each transient, and the user can access any transient by any known name of that transient. As an example, both of the commands below will fit the same transient:
+``MOSFiT`` does **not** download event JSON from the Open Astronomy Catalogs (or similar services). You must pass **paths to files** with the ``-e`` flag: catalog-format JSON (see schema links below), or ASCII tables that the built-in converter can turn into JSON.
 
 .. code-block:: bash
 
-    mosfit -m slsn -e PTF11dij
-    mosfit -m slsn -e CSS110406:135058+261642
+    mosfit -m slsn -e ./my_supernova.json
 
-While the Open Catalogs do their best to maintain the integrity of the data they contain, there is always the possibility that the data contains errors, so users are encouraged to spot check the data they download before using it for any scientific purpose. A common error is that the data has been tagged with the wrong photometric system, or has not been tagged with a photometric system at all and uses a different system from what is commonly used for a given telescope/instrument/band. Users are encouraged to immediately report any issues with the public data on the GitHub issues page assocated with that catalog (e.g. the Open Supernova Catalog's `issue page <https://github.com/astrocatalogs/supernovae/issues>`_).
+If ``-e`` does not resolve to an existing file, ``MOSFiT`` exits with an error explaining that network fetch by transient name is no longer supported.
 
 .. _private:
 
 ------------
-Private data
+ASCII / catalog JSON
 ------------
 
-If you have private data you would like to fit, the most robust way to load the data into ``MOSFiT`` is to directly construct a JSON file from your data that conforms to the `Open Catalog Schema <https://github.com/astrocatalogs/supernovae/blob/master/SCHEMA.md>`_. This way, the user can specify all the data that ``MOSFiT`` can use for every single observation in a precise way. All data provided by the Open Catalogs is provided in this form, and if the user open up a typical JSON file downloaded from one of these catalogs, they will find that each observation is tagged with all the information necessary to model it.
+If you already have catalog-format JSON, pass it directly. The format follows the Open Catalog schema (historical examples: `Supernova SCHEMA <https://github.com/astrocatalogs/supernovae/blob/master/SCHEMA.md>`_).
 
-Of course, it is more likely that the data a user will have handy will be in another form, typically an ASCII table where each row presents a single (or multiple) observations. ``MOSFiT`` includes a conversion feature where the user can simply pass the path to the file(s) to convert:
+For ASCII tables, pass the path to the file(s); ``MOSFiT`` converts them where needed:
 
 .. code-block:: bash
 
     mosfit -e path/to/my/ascii/file/my_transient.dat
     mosfit -e path/to/my/folder/of/ascii/files/*.dat
 
-In some cases, if the ASCII file is in a simple form with columns that match all the required columns, ``MOSFiT`` will silently convert the input files into JSON files, a copy of which will be saved to the current run directory. In most cases however, the user will be prompted to answer a series of questions about the data in a "choose your own adventure" style. If passed a list of files, ``MOSFiT`` will assume all the files share the same format and the user will only be asked questions about the first file.
-
-If the user so chooses, they may *optionally* upload their data directly to the Open Catalogs with the ``-u`` option. This will make their observational data publicly accessible on the Open Catalogs:
-
-.. code-block:: bash
-
-    mosfit -e path/to/my/ascii/file/my_transient.dat -u
-
-Note that this step is completely optional, users do not have to share their data publicly to use ``MOSFiT``, however it is the fastest way for your data to appear on the Open Catalogs. If a user believes they have uploaded any private data in error, they are encouraged to immediately contact the :ref:`maintainers <maintainers>`.
+If the ASCII file matches required columns closely, conversion may proceed quietly; otherwise you will be prompted to map columns. When multiple files share one format, questions are driven from the first file.
 
 .. _sampling:
 
@@ -84,15 +75,15 @@ By default, ``MOSFiT`` will attempt to use all available data when fitting a mod
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn --exclude-sources 2
+    mosfit -e ./LSQ12dlf.json -m slsn --exclude-sources 2
 
-will exclude all data from the paper that has the source ID number 2 on the Open Astronomy Catalog page.
+will exclude all data tagged with source ID ``2`` in your input JSON.
 
 To exclude times from a fit, the user can specify a range of MJDs that will be included using the ``-L`` option, e.g.:
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -L 55000 56000
+    mosfit -e ./LSQ12dlf.json -m slsn -L 55000 56000
 
 will limit the data fitted for LSQ12dlf to lie between MJD 55000 and MJD 56000.
 
@@ -102,7 +93,7 @@ As an example, assuming a user wants to fit the ``ic`` model to a transient that
 
 .. code-block:: bash
 
-    mosfit -e SN2004gk -m ic --exclude-kinds radio
+    mosfit -e ./SN2004gk.json -m ic --exclude-kinds radio
 
 .. _number:
 
@@ -129,7 +120,7 @@ As an example, the following will run the burn-in phase for 2000 iterations, the
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -f 100 -i 5000 -b 2000
+    mosfit -e ./LSQ12dlf.json -m slsn -f 100 -i 5000 -b 2000
 
 All :ref:`convergence <convergence>` metrics are computed *after* the burn-in phase, as the operations employed during burn-in do *not* preserve detailed balance. During burn-in, the solutions of highest likelihood are over-represented, and thus the posteriors should not be trusted until the :ref:`convergence <convergence>` criteria are met beyond the burn-in phase.
 
@@ -180,7 +171,7 @@ After completing a nested sampling run, it is often useful to draw parameter com
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -w name-of-output.json -G -N 100
+    mosfit -e ./LSQ12dlf.json -m slsn -w name-of-output.json -G -N 100
 
 where above we specify that we would like 100 parameter combinations from the ``nester`` output. The weights determined with ``nester`` will be used to proportionately draw walkers for ``ensembler``, yielding a sample that properly maps to the posterior determined by the nested sampling. As the above does not perform any additional sampling, the user does not need to specify an event to compare against, and can simply omit the ``-e`` flag and its argument(s).
 
@@ -200,7 +191,7 @@ By default, ``MOSFiT`` searches the local ``models`` folder copied to the run di
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -s mysuffix
+    mosfit -e ./LSQ12dlf.json -m slsn -s mysuffix
 
 will write to the file ``LSQ12dlf-mysuffix.json``. A copy of the output will also always be dumped to ``walkers.json`` in the same directory. The same suffix will applied to any additional outputs requested by the user, such as the ``chain.json`` and ``extras.json`` files.
 
@@ -214,19 +205,19 @@ Individual parameters can be locked to fixed values with the ``-F`` option, whic
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -F kappa
+    mosfit -e ./LSQ12dlf.json -m slsn -F kappa
 
 Or, will assume the value specified by the user:
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -F mejecta 3.0
+    mosfit -e ./LSQ12dlf.json -m slsn -F mejecta 3.0
 
 Multiple fixed variables can be specified by chaining them together, with any user-prescribed variables following the variable names:
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -F kappa mejecta 3.0
+    mosfit -e ./LSQ12dlf.json -m slsn -F kappa mejecta 3.0
 
 If you have a prior for a given variable (not a single value), it is best to modify your local ``parameters.json`` file. For instance, to place a Gaussian prior on ``vejecta`` in the SLSN model, replace the default ``parameters.json`` snippet, which looks like this:
 
@@ -296,7 +287,7 @@ The user can use the ensemble parameters from a prior ``MOSFiT`` run to draw the
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn -w LSQ12dlf-suffix.json
+    mosfit -e ./LSQ12dlf.json -m slsn -w LSQ12dlf-suffix.json
 
 If the file contains more walkers than requested by the new run, walker positions will be drawn verbatim from the input file, otherwise walker positions will be "jittered" by a small amount so no two walkers share identical parameters.
 

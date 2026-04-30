@@ -17,7 +17,7 @@ from six import string_types
 from mosfit import __author__, __contributors__, __version__
 from mosfit.fitter import Fitter
 from mosfit.printer import Printer
-from mosfit.utils import get_mosfit_hash, is_master, open_atomic, speak
+from mosfit.utils import get_mosfit_hash, is_master, speak
 
 
 class SortingHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
@@ -337,13 +337,6 @@ def get_parser(printer=None):
         help=prt.text('parser_force_copy'))
 
     parser.add_argument(
-        '--offline',
-        dest='offline',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_offline'))
-
-    parser.add_argument(
         '--prefer-cache',
         dest='prefer_cache',
         default=False,
@@ -374,14 +367,6 @@ def get_parser(printer=None):
         type=int,
         default=-1,
         help=prt.text('slice_sampler_steps'))
-
-    parser.add_argument(
-        '--upload',
-        '-u',
-        dest='upload',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_upload'))
 
     parser.add_argument(
         '--run-until-converged',
@@ -462,21 +447,6 @@ def get_parser(printer=None):
         help=prt.text('parser_print_trees'))
 
     parser.add_argument(
-        '--set-upload-token',
-        dest='set_upload_token',
-        const=True,
-        default=False,
-        nargs='?',
-        help=prt.text('parser_set_upload_token'))
-
-    parser.add_argument(
-        '--ignore-upload-quality',
-        dest='check_upload_quality',
-        default=True,
-        action='store_false',
-        help=prt.text('parser_check_upload_quality'))
-
-    parser.add_argument(
         '--test',
         dest='test',
         default=False,
@@ -514,27 +484,11 @@ def get_parser(printer=None):
         help=prt.text('parser_extra_outputs'))
 
     parser.add_argument(
-        '--catalogs',
-        '-C',
-        dest='catalogs',
-        default=[],
-        nargs='+',
-        help=prt.text('parser_catalogs'))
-
-    parser.add_argument(
         '--no-guessing',
         dest='no_guessing',
         default=False,
         action='store_true',
         help=prt.text('parser_no_guessing'))
-
-    parser.add_argument(
-        '--open-in-browser',
-        '-O',
-        dest='open_in_browser',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_open_in_browser'))
 
     parser.add_argument(
         '--exit-on-prompt',
@@ -544,32 +498,12 @@ def get_parser(printer=None):
         help=prt.text('parser_exit_on_prompt'))
 
     parser.add_argument(
-        '--download-recommended-data',
-        dest='download_recommended_data',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_download_recommended_data'))
-
-    parser.add_argument(
-        '--local-data-only',
-        dest='local_data_only',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_local_data_only'))
-
-    parser.add_argument(
         '--method',
         '-D',
         dest='method',
         choices=['ensembler', 'ultranest', 'dynesty'],
         default='ensembler',
         help=prt.text('parser_method'))
-
-    parser.add_argument(
-        '--cache-path',
-        dest='cache_path',
-        default='',
-        help=prt.text('parser_cache_path'))
 
     return parser
 
@@ -749,80 +683,6 @@ def main():
                 colorify=True,
                 width=width,
                 wrapped=False)
-
-        # Get/set upload token
-        upload_token = ''
-        get_token_from_user = False
-        if args.set_upload_token:
-            if args.set_upload_token is not True:
-                upload_token = args.set_upload_token
-            get_token_from_user = True
-
-        upload_token_path = os.path.join(dir_path, 'cache', 'dropbox.token')
-
-        # Perform a few checks on upload before running (to keep size
-        # manageable)
-        if args.upload and not args.test and args.smooth_times > 100:
-            response = prt.prompt('ul_warning_smooth')
-            if response:
-                args.upload = False
-            else:
-                sys.exit()
-
-        if (args.upload and not args.test and args.num_walkers is not None
-                and args.num_walkers < 100):
-            response = prt.prompt('ul_warning_few_walkers')
-            if response:
-                args.upload = False
-            else:
-                sys.exit()
-
-        if (args.upload and not args.test and args.num_walkers
-                and args.num_walkers * args.num_temps > 500):
-            response = prt.prompt('ul_warning_too_many_walkers')
-            if response:
-                args.upload = False
-            else:
-                sys.exit()
-
-        if args.upload:
-            if not os.path.isfile(upload_token_path):
-                get_token_from_user = True
-            else:
-                with open(upload_token_path, 'r') as f:
-                    upload_token = f.read().splitlines()
-                    if len(upload_token) != 1:
-                        get_token_from_user = True
-                    elif len(upload_token[0]) != 64:
-                        get_token_from_user = True
-                    else:
-                        upload_token = upload_token[0]
-
-        if get_token_from_user:
-            if args.test:
-                upload_token = ('1234567890abcdefghijklmnopqrstuvwxyz'
-                                '1234567890abcdefghijklmnopqr')
-            while len(upload_token) != 64:
-                prt.message(
-                    'no_ul_token', ['https://sne.space/mosfit/'], wrapped=True)
-                upload_token = prt.prompt('paste_token', kind='string')
-                if len(upload_token) != 64:
-                    prt.prt(
-                        'Error: Token must be exactly 64 characters in '
-                        'length.',
-                        wrapped=True)
-                    continue
-                break
-            with open_atomic(upload_token_path, 'w') as f:
-                f.write(upload_token)
-
-        if args.upload:
-            prt.prt(
-                "Upload flag set, will upload results after completion.",
-                wrapped=True)
-            prt.prt("Dropbox token: " + upload_token, wrapped=True)
-
-        args.upload_token = upload_token
 
         if no_events:
             prt.message('iterations_0', wrapped=True)

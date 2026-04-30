@@ -37,7 +37,7 @@ The user may wish to generate light curves for a transient in instruments/bands 
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf -m slsn --extra-instruments UVIS --extra-bands F218W --extra-systems Vega
+    mosfit -e ./LSQ12dlf.json -m slsn --extra-instruments UVIS --extra-bands F218W --extra-systems Vega
 
 .. _mock:
 
@@ -69,7 +69,7 @@ Because the chain can be quite large (a full chain for a model with 15 free para
 
 .. code-block:: bash
 
-    mosfit -m slsn -e LSQ12dlf -c
+    mosfit -m slsn -e ./LSQ12dlf.json -c
 
 Note that the outputted chain includes both the burn-in and post-burn-in phases of the fitting procedure. The position of each walker in the chain as a function of time can be visualized using the included ``mosfit.ipynb`` Jupyter notebook.
 
@@ -77,7 +77,7 @@ Memory can be quite scarce on some systems, and storing the chain in memory can 
 
 .. code-block:: bash
 
-    mosfit -m slsn -e LSQ12dlf -M 1000
+    mosfit -m slsn -e ./LSQ12dlf.json -M 1000
 
 .. _arbitrary:
 

@@ -30,7 +30,7 @@ If you must correct the error immediately, feel free to copy the input file down
 Can I fit private data with MOSFiT?
 ===================================
 
-Yes! Simply pass your ASCII datafile to the ``-e`` flag instead of the name of the transient you wish to fit. Your data will remain private unless you choose to upload it with the optional ``-u`` flag, which will warn you before any data is uploaded publicly. More info on fitting private data can be found :ref:`here <private>`.
+Yes! Pass the path to your ASCII datafile or catalog-format JSON using the ``-e`` flag. ``MOSFiT`` no longer fetches events over the network or uploads via ``-u``. More info can be found in :ref:`Event data / ASCII <private>` in the fitting docs.
 
 How do I exclude particular instruments/bands/sources from my fit?
 ==================================================================

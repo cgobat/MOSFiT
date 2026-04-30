@@ -27,7 +27,6 @@ class UltraNester(Sampler):
         if num_walkers is not None:
             self._run_kwargs['min_num_live_points'] = num_walkers
 
-        self._upload_model = None
         self._ntemps = 1
         self._nwalkers = self._num_walkers
 
@@ -40,14 +39,11 @@ class UltraNester(Sampler):
         }
         modeldict[MODEL.STEPS] = str(self._niter)
 
-    def prepare_output(self, check_upload_quality, upload):
-        """Prepare output for writing to disk and uploading."""
+    def prepare_output(self):
+        """Prepare nested samples for writing."""
         self._pout = [self._results['weighted_samples']['points']]
         self._lnprobout = [self._results['weighted_samples']['logl']]
         self._weights = [self._results['weighted_samples']['weights']]
-
-        if check_upload_quality:
-            pass
 
     def run(self, walker_data):
         """Use nested sampling to determine posteriors."""

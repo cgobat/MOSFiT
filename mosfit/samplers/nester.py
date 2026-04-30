@@ -36,7 +36,6 @@ class Nester(Sampler):
         self._fracking = fracking
         self._frack_step = frack_step
 
-        self._upload_model = None
         self._ntemps = 1
 
     def append_output(self, modeldict):
@@ -48,17 +47,14 @@ class Nester(Sampler):
         }
         modeldict[MODEL.STEPS] = str(self._niter)
 
-    def prepare_output(self, check_upload_quality, upload):
-        """Prepare output for writing to disk and uploading."""
+    def prepare_output(self):
+        """Prepare nested samples for writing."""
         self._pout = [self._results.samples]
         self._lnprobout = [self._results.logl]
         self._weights = [np.exp(self._results.logwt - max(
             self._results.logwt))]
         tweight = np.sum(self._weights)
         self._weights = [x / tweight for x in self._weights]
-
-        if check_upload_quality:
-            pass
 
     def run(self, walker_data):
         """Use nested sampling to determine posteriors."""

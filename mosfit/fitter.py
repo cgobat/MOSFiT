@@ -27,7 +27,7 @@ from mosfit.samplers.nester import Nester
 from mosfit.samplers.ultranester import UltraNester
 from mosfit.utils import (all_to_list, entabbed_json_dump, entabbed_json_dumps,
                           flux_density_unit, frequency_unit, get_model_hash,
-                          listify, open_atomic, slugify, speak)
+                          listify, open_atomic, speak)
 
 from .model import Model
 
@@ -88,9 +88,7 @@ class Fitter(object):
                  exit_on_prompt=False,
                  limiting_magnitude=None,
                  prefer_fluxes=False,
-                 offline=False,
                  prefer_cache=False,
-                 open_in_browser=False,
                  pool=None,
                  quiet=False,
                  test=False,
@@ -104,15 +102,12 @@ class Fitter(object):
             quiet=quiet,
             fitter=self,
             exit_on_prompt=exit_on_prompt)
-        self._fetcher = Fetcher(
-            test=test, open_in_browser=open_in_browser, printer=self._printer)
+        self._fetcher = Fetcher(test=test, printer=self._printer)
 
         self._cuda = cuda
         self._limiting_magnitude = limiting_magnitude
         self._prefer_fluxes = prefer_fluxes
-        self._offline = offline
         self._prefer_cache = prefer_cache
-        self._open_in_browser = open_in_browser
         self._quiet = quiet
         self._test = test
         self._wrap_length = wrap_length
@@ -156,10 +151,7 @@ class Fitter(object):
                    exclude_kinds=[],
                    output_path='',
                    suffix='',
-                   upload=False,
                    write=False,
-                   upload_token='',
-                   check_upload_quality=False,
                    variance_for_each=[],
                    user_fixed_parameters=[],
                    user_released_parameters=[],
@@ -176,14 +168,10 @@ class Fitter(object):
                    extra_outputs=None,
                    quick_save=False,
                    walker_paths=[],
-                   catalogs=[],
                    exit_on_prompt=False,
-                   download_recommended_data=False,
-                   local_data_only=False,
                    guess=True,
                    method=None,
                    seed=None,
-                   cache_path='',
                    **kwargs):
         """Fit a list of events with a list of models."""
         global model
@@ -199,9 +187,6 @@ class Fitter(object):
         self._maximum_memory = maximum_memory
         self._debug = False
         self._speak = speak
-        self._download_recommended_data = download_recommended_data
-        self._local_data_only = local_data_only
-        self._cache_path = cache_path
 
         self._draw_above_likelihood = draw_above_likelihood
 
@@ -213,17 +198,12 @@ class Fitter(object):
         if len(model_list) and not len(event_list):
             event_list = ['']
 
-        # Exclude catalogs not included in catalog list.
-        self._fetcher.add_excluded_catalogs(catalogs)
-
         if not len(event_list) and not len(model_list):
             prt.message('no_events_models', warning=True)
 
-        # If the input is not a JSON file, assume it is either a list of
-        # transients or that it is the data from a single transient in tabular
-        # form. Try to guess the format first, and if that fails ask the user.
-        self._converter = Converter(prt, require_source=upload, guess=guess,
-                                    cache_path=cache_path)
+        # If the input is not a JSON file, assume it is either a path or that
+        # it is the data from a single transient in tabular form.
+        self._converter = Converter(prt, require_source=False, guess=guess)
         event_list = self._converter.generate_event_list(event_list)
 
         event_list = [x.replace('‑', '-') for x in event_list]
@@ -286,8 +266,6 @@ class Fitter(object):
                             prt.message('no_walker_data')
                     else:
                         prt.message('no_walker_data')
-                        if self._offline:
-                            prt.message('omit_offline')
                         raise RuntimeError
                     wfi = wfi + 1
 
@@ -306,11 +284,7 @@ class Fitter(object):
 
         pool = get_pool(method=method)
         if pool.is_master():
-            fetched_events = self._fetcher.fetch(
-                event_list,
-                offline=self._offline,
-                prefer_cache=self._prefer_cache,
-                cache_path=self._cache_path)
+            fetched_events = self._fetcher.fetch(event_list)
 
             for rank in range(1, pool.size + 1):
                 pool.comm.send(fetched_events, dest=rank, tag=0)
@@ -380,92 +354,29 @@ class Fitter(object):
                         }
                         self._event_data = self.generate_dummy_data(**gen_args)
 
-                    success = False
-                    alt_name = None
-                    while not success:
-                        self._model.reset_unset_recommended_keys()
-                        success = self._model.load_data(
-                            self._event_data,
-                            event_name=self._event_name,
-                            smooth_times=smooth_times,
-                            extrapolate_time=extrapolate_time,
-                            limit_fitting_mjds=limit_fitting_mjds,
-                            exclude_bands=exclude_bands,
-                            exclude_instruments=exclude_instruments,
-                            exclude_systems=exclude_systems,
-                            exclude_sources=exclude_sources,
-                            exclude_kinds=exclude_kinds,
-                            time_list=time_list,
-                            time_unit=time_unit,
-                            band_list=band_list,
-                            band_systems=band_systems,
-                            band_instruments=band_instruments,
-                            band_bandsets=band_bandsets,
-                            band_sampling_points=band_sampling_points,
-                            variance_for_each=variance_for_each,
-                            user_fixed_parameters=user_fixed_parameters,
-                            user_released_parameters=user_released_parameters,
-                            pool=pool)
-
-                        if not success:
-                            break
-
-                        if self._local_data_only:
-                            break
-
-                        # If our data is missing recommended keys, offer the
-                        # user option to pull the missing data from online and
-                        # merge with existing data.
-                        urk = self._model.get_unset_recommended_keys()
-                        ptxt = prt.text('acquire_recommended',
-                                        [', '.join(list(urk))])
-                        while event and len(urk) and (
-                                alt_name or self._download_recommended_data
-                                or prt.prompt(
-                                    ptxt, [', '.join(urk)], kind='bool')):
-                            pool = get_pool(method=method)
-                            if pool.is_master():
-                                en = (alt_name
-                                      if alt_name else self._event_name)
-                                extra_event = self._fetcher.fetch(
-                                    en,
-                                    offline=self._offline,
-                                    prefer_cache=self._prefer_cache,
-                                    cache_path=self._cache_path)[0]
-                                extra_data = self._fetcher.load_data(
-                                    extra_event)
-
-                                for rank in range(1, pool.size + 1):
-                                    pool.comm.send(
-                                        extra_data, dest=rank, tag=4)
-                                pool.close()
-                            else:
-                                extra_data = pool.comm.recv(source=0, tag=4)
-                                pool.wait()
-
-                            if extra_data is not None:
-                                extra_data = extra_data[list(
-                                    extra_data.keys())[0]]
-
-                                for key in urk:
-                                    new_val = extra_data.get(key)
-                                    self._event_data[list(
-                                        self._event_data.keys())
-                                                     [0]][key] = new_val
-                                    if new_val is not None and len(new_val):
-                                        prt.message('extra_value', [
-                                            key,
-                                            str(new_val[0].get(QUANTITY.VALUE))
-                                        ])
-                                success = False
-                                prt.message('reloading_merged')
-                                break
-                            else:
-                                text = prt.text('extra_not_found',
-                                                [self._event_name])
-                                alt_name = prt.prompt(text, kind='string')
-                                if not alt_name:
-                                    break
+                    self._model.reset_unset_recommended_keys()
+                    success = self._model.load_data(
+                        self._event_data,
+                        event_name=self._event_name,
+                        smooth_times=smooth_times,
+                        extrapolate_time=extrapolate_time,
+                        limit_fitting_mjds=limit_fitting_mjds,
+                        exclude_bands=exclude_bands,
+                        exclude_instruments=exclude_instruments,
+                        exclude_systems=exclude_systems,
+                        exclude_sources=exclude_sources,
+                        exclude_kinds=exclude_kinds,
+                        time_list=time_list,
+                        time_unit=time_unit,
+                        band_list=band_list,
+                        band_systems=band_systems,
+                        band_instruments=band_instruments,
+                        band_bandsets=band_bandsets,
+                        band_sampling_points=band_sampling_points,
+                        variance_for_each=variance_for_each,
+                        user_fixed_parameters=user_fixed_parameters,
+                        user_released_parameters=user_released_parameters,
+                        pool=pool)
 
                     if success:
                         self._walker_data = walker_data
@@ -486,9 +397,6 @@ class Fitter(object):
                             output_path=output_path,
                             suffix=suffix,
                             write=write,
-                            upload=upload,
-                            upload_token=upload_token,
-                            check_upload_quality=check_upload_quality,
                             convergence_type=convergence_type,
                             convergence_criteria=convergence_criteria,
                             save_full_chain=save_full_chain,
@@ -530,9 +438,6 @@ class Fitter(object):
                  output_path='',
                  suffix='',
                  write=False,
-                 upload=False,
-                 upload_token='',
-                 check_upload_quality=True,
                  convergence_type=None,
                  convergence_criteria=None,
                  save_full_chain=False,
@@ -549,20 +454,8 @@ class Fitter(object):
         model = self._model
         prt = self._printer
 
-        upload_model = upload and iterations > 0
-
         if pool is not None:
             self._pool = pool
-
-        if upload:
-            try:
-                import dropbox
-            except ImportError:
-                if self._test:
-                    pass
-                else:
-                    prt.message('install_db', error=True)
-                    raise
 
         if not self._pool.is_master():
             try:
@@ -656,7 +549,7 @@ class Fitter(object):
                                  (MODEL.VERSION, __version__),
                                  (MODEL.SOURCE, source)])
 
-        self._sampler.prepare_output(check_upload_quality, upload)
+        self._sampler.prepare_output()
 
         self._sampler.append_output(modeldict)
 
@@ -665,9 +558,6 @@ class Fitter(object):
         modelhash = get_model_hash(
             umodeldict, ignore_keys=[MODEL.DATE, MODEL.SOURCE])
         umodelnum = uentry.add_model(**umodeldict)
-
-        if self._sampler._upload_model is not None:
-            upload_model = self._sampler._upload_model
 
         modelnum = entry.add_model(**modeldict)
 
@@ -966,56 +856,6 @@ class Fitter(object):
                     if not quick_save:
                         entabbed_json_dump(ouentry, flast, separators=(',', ':'))
                     entabbed_json_dump(ouentry, feven, separators=(',', ':'))
-
-        if upload_model:
-            prt.message('ul_fit', [entryhash, modelhash])
-            upayload = entabbed_json_dumps(ouentry, separators=(',', ':'))
-            try:
-                dbx = dropbox.Dropbox(upload_token)
-                dbx.files_upload(
-                    upayload.encode(),
-                    '/' + uname + '.json',
-                    mode=dropbox.files.WriteMode.overwrite)
-                prt.message('ul_complete')
-            except Exception:
-                if self._test:
-                    pass
-                else:
-                    raise
-
-        if upload:
-            for ce in self._converter.get_converted():
-                dentry = Entry.init_from_file(
-                    catalog=None,
-                    name=ce[0],
-                    path=ce[1],
-                    merge=False,
-                    pop_schema=False,
-                    ignore_keys=[ENTRY.MODELS],
-                    compare_to_existing=False)
-
-                dentry.sanitize()
-                odentry = {ce[0]: uentry._ordered(dentry)}
-                dpayload = entabbed_json_dumps(odentry, separators=(',', ':'))
-                text = prt.message('ul_devent', [ce[0]], prt=False)
-                ul_devent = prt.prompt(text, kind='bool', message=False)
-                if ul_devent:
-                    dpath = '/' + slugify(
-                        ce[0] + '_' + dentry[ENTRY.SOURCES][0].get(
-                            SOURCE.BIBCODE, dentry[ENTRY.SOURCES][0].get(
-                                SOURCE.NAME, 'NOSOURCE'))) + '.json'
-                    try:
-                        dbx = dropbox.Dropbox(upload_token)
-                        dbx.files_upload(
-                            dpayload.encode(),
-                            dpath,
-                            mode=dropbox.files.WriteMode.overwrite)
-                        prt.message('ul_complete')
-                    except Exception:
-                        if self._test:
-                            pass
-                        else:
-                            raise
 
         if self._method == 'ultranest': #and self._sampler._sampler.mpi_size > 1:
             # send results to other MPI processes (above)

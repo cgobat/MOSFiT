@@ -12,7 +12,7 @@ from astrocats.catalog.quantity import QUANTITY
 from emcee.autocorr import AutocorrError
 from mosfit.mossampler import MOSSampler
 from mosfit.samplers.sampler import Sampler
-from mosfit.utils import calculate_WAIC, pretty_num
+from mosfit.utils import calculate_WAIC
 
 
 class Ensembler(Sampler):
@@ -41,7 +41,6 @@ class Ensembler(Sampler):
         self._fracking = fracking
         self._frack_step = frack_step
 
-        self._upload_model = None
         self._WAIC = None
 
     def append_output(self, modeldict):
@@ -73,19 +72,8 @@ class Ensembler(Sampler):
                 )
             modeldict[MODEL.STEPS] = str(self._emi)
 
-    def prepare_output(self, check_upload_quality, upload):
-        """Prepare output for writing to disk and uploading."""
-        prt = self._printer
-
-        if check_upload_quality:
-            if self._WAIC is None:
-                self._upload_model = False
-            elif self._WAIC is not None and self._WAIC < 0.0:
-                if upload:
-                    prt.message('no_ul_waic', ['' if self._WAIC is None
-                                               else pretty_num(self._WAIC)])
-                self._upload_model = False
-
+    def prepare_output(self):
+        """Prepare samples for writing."""
         if len(self._all_chain):
             self._pout = self._all_chain[:, :, -1, :]
             self._lnprobout = self._all_lnprob[:, :, -1]

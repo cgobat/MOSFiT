@@ -12,24 +12,23 @@ Once installed, ``MOSFiT`` can be run from any directory, and it's typically con
     mkdir mosfit_runs
     cd mosfit_runs
 
-``MOSFiT`` can be invoked either via either :code:`python -m mosfit` or simply :code:`mosfit`. Then, to run ``MOSFiT``, pass an event name to the program via
-the ``-e`` option:
+``MOSFiT`` can be invoked either via :code:`python -m mosfit` or simply :code:`mosfit`. Pass **paths** to catalog-format JSON (or ASCII for conversion) with ``-e``:
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf
+    mosfit -e ./LSQ12dlf.json
 
-The above command will prompt the user to choose a model (of those distributed with ``MOSFiT``) to fit against the data, using the event's claimed type to provide a list of suggested models. A specific model can be fit to transients using the model option ``-m``:
-
-.. code-block:: bash
-
-    mosfit -e LSQ12dlf -m slsn
-
-Multiple events can be fit in succession by passing a list of names separated by spaces (names containing spaces can be specified using quotation marks):
+The above command will prompt the user to choose a model (of those distributed with ``MOSFiT``) to fit against the data, using the event's claimed type to provide a list of suggested models. A specific model can be specified with ``-m``:
 
 .. code-block:: bash
 
-    mosfit -e LSQ12dlf SN2015bn "SDSS-II SN 5751"
+    mosfit -e ./LSQ12dlf.json -m slsn
+
+Multiple JSON files can be fit in succession (paths with spaces in quotes):
+
+.. code-block:: bash
+
+    mosfit -e ./LSQ12dlf.json ./SN2015bn.json
 
 The code outputs JSON files for each event/model combination that each contain a set of walkers that have been relaxed into an equilibrium about the posterior parameter distributions. This output is visualized via an example Jupyter notebook (``mosfit.ipynb``), which is copied to the ``products`` folder in the run directory, and by default shows output from the last ``MOSFiT`` run.
 
@@ -43,7 +42,7 @@ Parallel execution
 
 .. code-block:: bash
 
-    mpirun -np 5 mosfit -e LSQ12dlf
+    mpirun -np 5 mosfit -e ./LSQ12dlf.json
 
 ``MOSFiT`` can also be run without specifying an event, which will yield a collection of light curves for the specified model described by the priors on the possible combinations of input parameters specified in the ``parameters.json`` file. This is useful for determining the range of possible outcomes for a given theoretical model:
 
