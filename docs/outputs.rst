@@ -51,7 +51,7 @@ Generating a light curve from a model in ``MOSFiT`` is achieved by simply not pa
 
     mosfit -m slsn
 
-By default, these light curves will be the *exact* model predictions, they will not account for any observational error. If Gaussian Processes were used (by default they are enabled for all models), the output predictions will include an ``e_magnitude`` value that is set by the variance predicted by the GP model; if not, the ``variance`` parameter from maximum likelihood is used.
+By default, these light curves are *exact* model predictions: MOSFiT does not add survey-style scatter when no event file is supplied. Uncertainties that appear alongside magnitudes follow the ordinary likelihood / variance parameters wired into the chosen model—not a residual Gaussian-process layer.
 
 If the user wishes to produce mock observations for a given instrument, they should use the ``-l`` option, which sets a limiting magnitude and then randomly draws observations based upon the flux error implied by that limiting magnitude (the second argument to ``-l`` sets the variance of the limiting magnitude from observation to observation). For example, if the user wishes to generate mock light curves as they might be observed by LSST assuming a limiting magnitude of 23 for all bands, they would execute:
 
