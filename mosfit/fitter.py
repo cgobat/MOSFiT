@@ -86,7 +86,6 @@ class Fitter(object):
     def __init__(self,
                  cuda=False,
                  exit_on_prompt=False,
-                 language='en',
                  limiting_magnitude=None,
                  prefer_fluxes=False,
                  offline=False,
@@ -104,7 +103,6 @@ class Fitter(object):
             wrap_length=wrap_length,
             quiet=quiet,
             fitter=self,
-            language=language,
             exit_on_prompt=exit_on_prompt)
         self._fetcher = Fetcher(
             test=test, open_in_browser=open_in_browser, printer=self._printer)

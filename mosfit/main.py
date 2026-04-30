@@ -3,7 +3,6 @@
 
 import argparse
 import codecs
-import locale
 import os
 import shutil
 import sys
@@ -30,27 +29,14 @@ class SortingHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
         super(SortingHelpFormatter, self).add_arguments(actions)
 
 
-def get_parser(only=None, printer=None):
+def get_parser(printer=None):
     """Retrieve MOSFiT's `argparse.ArgumentParser` object."""
     prt = Printer() if printer is None else printer
 
     parser = argparse.ArgumentParser(
         prog='mosfit',
         description='Fit astrophysical transients.',
-        formatter_class=SortingHelpFormatter,
-        add_help=only is None)
-
-    parser.add_argument(
-        '--language',
-        dest='language',
-        type=str,
-        const='select',
-        default='en',
-        nargs='?',
-        help=("Language for output text."))
-
-    if only == 'language':
-        return parser
+        formatter_class=SortingHelpFormatter)
 
     parser.add_argument(
         '--events',
@@ -590,50 +576,12 @@ def get_parser(only=None, printer=None):
 
 def main():
     """Run MOSFiT."""
-    prt = Printer(
-        wrap_length=100, quiet=False, language='en', exit_on_prompt=False)
-
-    parser = get_parser(only='language')
-    args, _ = parser.parse_known_args()
-
-    if args.language == 'en':
-        loc = locale.getlocale()
-        if loc[0]:
-            args.language = loc[0].split('_')[0]
-
-    if args.language != 'en':
-        try:
-            from googletrans.constants import LANGUAGES
-        except Exception:
-            raise RuntimeError('`--language` requires `googletrans` package, '
-                               'install with `pip install googletrans`.')
-
-        if args.language == 'select' or args.language not in LANGUAGES:
-            languages = list(
-                sorted([
-                    LANGUAGES[x].title().replace('_', ' ') + ' (' + x + ')'
-                    for x in LANGUAGES
-                ]))
-            sel = prt.prompt(
-                'Select a language:',
-                kind='select',
-                options=languages,
-                message=False)
-            args.language = sel.split('(')[-1].strip(')')
-
-    prt = Printer(language=args.language)
-
-    language = args.language
-
-    parser = get_parser(printer=prt)
+    parser = get_parser(printer=Printer(exit_on_prompt=False))
     args = parser.parse_args()
-
-    args.language = language
 
     prt = Printer(
         wrap_length=100,
         quiet=args.quiet,
-        language=args.language,
         exit_on_prompt=args.exit_on_prompt)
 
     if args.version:

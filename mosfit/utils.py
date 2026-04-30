@@ -233,13 +233,11 @@ def is_master():
 
 def speak(text, lang='es'):
     """Text to speech. For fun."""
-    from googletrans import Translator
     from gtts import gTTS
     from pygame import mixer
     from tempfile import TemporaryFile
 
-    translator = Translator()
-    tts = gTTS(text=translator.translate(text, dest=lang).text, lang=lang)
+    tts = gTTS(text=text, lang=lang)
     mixer.init()
 
     sf = TemporaryFile()
