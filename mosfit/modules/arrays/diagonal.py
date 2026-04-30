@@ -73,6 +73,18 @@ class Diagonal(Array):
         if np.any(diag == None):  # noqa: E711
             raise ValueError('Null error.')
 
+        preset = kwargs.get('emulator_preset_systematic_mag')
+        if preset is not None:
+            preset = np.asarray(preset, dtype=np.float64)
+            if preset.shape[0] == len(self._observed):
+                preset = preset[self._observed]
+            if preset.shape == diag.shape:
+                mag_like = np.isin(
+                    self._o_types, ('magnitude', 'magcount'))
+                pv = np.nan_to_num(preset, nan=0.0, posinf=0.0, neginf=0.0)
+                pv = np.maximum(pv, 0.0)
+                diag = diag + mag_like * (pv ** 2)
+
         ret['kdiagonal'] = diag
         ret['kresiduals'] = residuals
 

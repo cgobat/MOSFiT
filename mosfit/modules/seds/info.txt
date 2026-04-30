@@ -1,2 +1,1 @@
-HEre, I need to move the emulator.pth file into here. 
-Then, I will run these lines of code to produce a .pth file that holds a dictionary of the weights only. 
+Sampson emulator weights live in mosfit/emulators/sampson/ (see mosfit.emulators.emulator_weights_dir).

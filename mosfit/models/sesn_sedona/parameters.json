@@ -45,7 +45,7 @@
         "max_value":7.5
     },
     "variance":{
-        "min_value":1.0e-3,
+        "min_value":5.0e-2,
         "max_value":100.0,
         "log":true
     },
