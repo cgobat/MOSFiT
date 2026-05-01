@@ -13,8 +13,7 @@ This class:
 """
 
 from math import pi
-from pathlib import Path
-import os
+
 import numpy as np
 import torch
 
@@ -84,59 +83,6 @@ NORMALIZATION_STATS_PATH = str(
     _WEIGHTS_DIR / "normalization_stats_tmin4_tmax60_N15.pt"
 )
 EMULATOR_WEIGHTS_PATH = str(_WEIGHTS_DIR / "emulator.pth")
-
-
-def _sampson_debug_enabled():
-    v = os.environ.get("MOSFIT_SAMPSON_DEBUG", "").strip().lower()
-    return v not in ("", "0", "false", "no", "off")
-
-
-def _debug_band_looks_like_b(bl: str) -> bool:
-    """Heuristic match for Bessell-/Johnson-/single-letter B passbands."""
-    bl = bl.lower().strip()
-    if not bl:
-        return False
-    if ("bessell" in bl) and (
-            ".b" in bl.replace(" ", "") or "/b." in bl or "bessell.b" in bl):
-        return True
-    if "johnson_b" in bl or bl.endswith(("johnson_b", "cousins_b")):
-        return True
-    if bl.endswith(("_b", "/b")):
-        return True
-    tail = bl.replace(" ", "").split("/")[-1].split(".")[-1].rstrip("*").split("_")[
-        -1]
-    return tail == "b"
-
-
-def _summarize_nn_debug(pred_valid_torch, flux_np_after_floor):
-    """Summaries for MOSFIT_SAMPSON_DEBUG (pre-10** log target, post-10** linear flux)."""
-    pv = pred_valid_torch.detach().cpu().numpy().astype(np.float64).ravel()
-    ok = np.isfinite(pv)
-    lines = []
-    if np.any(ok):
-        lines.append(
-            "pred before 10** (log10-like target flux) min/max: {:.6g} {:.6g}".format(
-                float(np.min(pv[ok])), float(np.max(pv[ok]))
-            )
-        )
-        lines.append("pred finite frac: {:.4f}".format(float(np.mean(ok))))
-    else:
-        lines.append("pred before 10**: no finite values")
-    fl = flux_np_after_floor.ravel().astype(np.float64, copy=False)
-    okf = np.isfinite(fl) & (fl > 0)
-    lines.append(
-        "linear flux after exp(clip(log10 target))+floor nan_frac: {:.4f}".format(
-            float(np.mean(~np.isfinite(fl)))
-        )
-    )
-    if np.any(okf):
-        lines.append(
-            "linear flux log10 min/max (finite, after floor): {:.6g} {:.6g}".format(
-                float(np.min(np.log10(fl[okf]))),
-                float(np.max(np.log10(fl[okf]))),
-            )
-        )
-    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -365,22 +311,18 @@ class Sampson(SED):
             (unique_times <= Sampson.EMULATOR_T_MAX)
         )
 
-        dbg_nn_pred_valid = None
-        dbg_flux_np_after_floor = None
         if np.any(valid_query_mask):
             valid_input = input_batch[valid_query_mask]
             with torch.no_grad():
                 pred_valid = (
                     Sampson.model(valid_input) * msd["fluxes_std"] + msd["fluxes_mean"]
                 )
-            dbg_nn_pred_valid = pred_valid
             # Network outputs log10-like flux bins. Avoid float32 overflow:
             # ``10.** x`` overflows in fp32 near x ≈ log10(3e38) ≈ 38.53; standalone uses
             # ``exp(clip(log(10)*x))`` in float64 (see sampson_emulator.py).
             pred_lp = pred_valid.detach().cpu().numpy().astype(np.float64)
             lin = np.exp(np.clip(pred_lp * np.log(10.0), -700.0, 700.0))
             pred_fluxes_valid_np = np.maximum(lin, Sampson.MIN_LINEAR_FLUX)
-            dbg_flux_np_after_floor = pred_fluxes_valid_np
 
         else:
             pred_fluxes_valid_np = None
@@ -405,16 +347,11 @@ class Sampson(SED):
         seds = []
         rest_wavs_dict = {}
 
-        dbg_ex_li = None
-        dbg_ex_stats = None
-
         for li, lum in enumerate(self._luminosities):
             bi = self._band_indices[li]
             ti = self._dense_indices[li]
 
             dense_time = self._times[ti]  # rest-frame days since explosion
-            
-
 
             # mark whether this point is inside emulator's training window
             if Sampson.EMULATOR_T_MIN <= dense_time <= Sampson.EMULATOR_T_MAX:
@@ -442,32 +379,6 @@ class Sampson(SED):
 
             # NOTE: `lum` is not currently used to rescale flux.
 
-            if _sampson_debug_enabled() and dbg_ex_li is None and li < len(
-                    self._bands):
-                ost = kwargs.get("observation_types")
-                bstr = str(self._bands[li])
-                bl = bstr.lower()
-                # Sampson DAG inputs omit ``observation_types`` → treat rows as observable
-                if ost is None or li >= len(np.asarray(ost, dtype=object)):
-                    ok_mag = True
-                else:
-                    ostr = str(np.asarray(ost, dtype=object).ravel()[li])
-                    ol = ostr.strip().lower()
-                    ok_mag = ol in ("magnitude", "magcount") or (
-                        ol.startswith("mag") and "upper" not in ol and ol not in ("magnitudelimit",)
-                    )
-                ok_b_band = _debug_band_looks_like_b(bl)
-                if ok_mag and ok_b_band:
-                    dbg_ex_li = li
-                    pgrid = np.asarray(pred_fluxes_np, dtype=np.float64).ravel()
-                    rrest = np.asarray(rest_fluxes, dtype=np.float64).ravel()
-                    dbg_ex_stats = {
-                        "dense_t_rest": float(dense_time),
-                        "dense_idx": int(ti),
-                        "pred_grid_nan_frac": float(np.mean(~np.isfinite(pgrid))),
-                        "interp_nan_frac": float(np.mean(~np.isfinite(rrest))),
-                    }
-
             seds.append(rest_fluxes)
 
         # ----------------------------------------------------------------------
@@ -480,54 +391,6 @@ class Sampson(SED):
         _finite = np.isfinite(seds)
         if np.any(_finite):
             seds[_finite] = np.maximum(seds[_finite], Sampson.MIN_LINEAR_FLUX)
-
-        if _sampson_debug_enabled():
-            lines = [
-                "[MOSFIT_SAMPSON_DEBUG] Sampson.process",
-                "z={:.8f} (1+z)={:.8f}".format(float(z), float(zp1)),
-                "rest_t_explosion ({}) = {}".format(rtk, repr(t_rest_origin)),
-                "dense t_rest=self._times obs_times - rest_t_explosion "
-                "→ min/max: {:.6g} {:.6g} (N={})".format(
-                    float(np.min(self._times)) if len(self._times) else float("nan"),
-                    float(np.max(self._times)) if len(self._times) else float("nan"),
-                    len(self._times),
-                ),
-                "unique_times min/max: {:.6g} {:.6g} (n_unique={})".format(
-                    float(np.min(unique_times)) if len(unique_times) else float("nan"),
-                    float(np.max(unique_times)) if len(unique_times) else float("nan"),
-                    len(unique_times),
-                ),
-                "valid_query_mask (time in [{}, {}]) true: {}/{}".format(
-                    Sampson.EMULATOR_T_MIN,
-                    Sampson.EMULATOR_T_MAX,
-                    int(np.sum(valid_query_mask)),
-                    len(valid_query_mask),
-                ),
-            ]
-            if dbg_nn_pred_valid is not None and dbg_flux_np_after_floor is not None:
-                lines.extend(
-                    _summarize_nn_debug(dbg_nn_pred_valid, dbg_flux_np_after_floor)
-                )
-            else:
-                lines.append(
-                    "NN skipped (no valid_query_mask true in batch)."
-                )
-            if dbg_ex_stats is not None:
-                lines.append(
-                    "exemplar B-band row li={} band={!r} "
-                    "dense_t_rest={:.6g} d dense_idx={} "
-                    "nan_frac on 41-pt grid {:.4f} nan_frac after interp {:.4f}".format(
-                        dbg_ex_li,
-                        str(self._bands[int(dbg_ex_li)]),
-                        dbg_ex_stats["dense_t_rest"],
-                        dbg_ex_stats["dense_idx"],
-                        dbg_ex_stats["pred_grid_nan_frac"],
-                        dbg_ex_stats["interp_nan_frac"],
-                    )
-                )
-            else:
-                lines.append("exemplar: no B-band row matched for debug.")
-            print("\n".join(lines), flush=True)
 
         seds = self.add_to_existing_seds(seds, **kwargs)
 
