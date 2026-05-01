@@ -108,7 +108,7 @@
     "parser_events": "Space-delimited paths to inputs. Each must be an existing file: catalog-format JSON (typically `.json`) or an ASCII table for conversion. MOSFiT does not resolve transient names or download catalog JSON online. Paths with spaces must be quoted.",
     "parser_exclude_bands": "List of bands to exclude in fitting.",
     "parser_exclude_instruments": "List of instruments to exclude in fitting corresponding to the bands listed in `--exclude-bands`.",
-    "parser_exclude_kinds": "List of kinds of observations to exclude when fitting. These are specified using keywords such as `radio` or `x-ray`.",
+    "parser_exclude_kinds": "List of kinds of observations to exclude when fitting. These are specified using keywords such as `radio`, `x-ray`, or `bolometric` (catalog photometry rows with `luminosity` and no other flux/magnitude columns).",
     "parser_exclude_sources": "List of references to exclude from the fit (source identifiers as recorded in each photometry datum in your input catalog JSON—often numbered in order of declaration in that file).",
     "parser_exclude_systems": "List of systems to exclude in fitting corresponding to the bands listed in `--exclude-bands`.",
     "parser_exit_on_prompt": "Exit immediately if any user prompts are encountered (useful for batch jobs).",

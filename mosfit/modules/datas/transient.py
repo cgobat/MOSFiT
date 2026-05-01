@@ -155,6 +155,25 @@ class Transient(Module):
                             (not len(ex_kinds) or 'none' not in ex_kinds) and
                                 'x-ray' not in self._model._kinds_supported):
                             continue
+                    if ('luminosity' in entry and (
+                            entry['luminosity'] is not None and
+                            entry['luminosity'] != '')):
+                        no_other_phot = not any([
+                            k in entry and entry.get(k) not in (None, '')
+                            for k in (
+                                'magnitude',
+                                'fluxdensity',
+                                'countrate',
+                                'flux',
+                                'unabsorbedflux',
+                            )
+                        ])
+                        if no_other_phot:
+                            self._kinds_needed.add('bolometric')
+                            if ('bolometric' in ex_kinds or (
+                                    (not len(ex_kinds) or 'none' not in ex_kinds)
+                                    and 'bolometric' not in self._model._kinds_supported)):
+                                continue
                     if 'magnitude' in entry:
                         # For now, magnitudes are not excludable.
                         self._kinds_needed |= set(
@@ -243,7 +262,10 @@ class Transient(Module):
                                 'unmatched_' + plural, []).append(val)
 
         if 'times' not in self._data or not any([x in self._data for x in [
-                'magnitudes', 'frequencies', 'countrates']]):
+                'magnitudes',
+                'frequencies',
+                'countrates',
+                'luminosities']]):
             prt.message('no_fittable_data', [name])
             return False
 
@@ -264,17 +286,22 @@ class Transient(Module):
                     self._data_determined_parameters.append(key)
 
         if any(x in self._data for x in [
-                'magnitudes', 'countrates', 'fluxdensities']):
+                'magnitudes',
+                'countrates',
+                'fluxdensities',
+                'luminosities']):
             # Add a list of tags for each observation to indicate what unit
             # observation is provided in.
             self._data['measures'] = [(
                 (['magnitude'] if x else []) +
                 (['countrate'] if y else []) +
-                (['fluxdensity'] if x else []))
-                for x, y, z in zip(*(
+                (['fluxdensity'] if z else []) +
+                (['luminosity'] if w else []))
+                for x, y, z, w in zip(*(
                     self._data['magnitudes'],
                     self._data['countrates'],
-                    self._data['fluxdensities']))]
+                    self._data['fluxdensities'],
+                    self._data['luminosities']))]
 
         if 'times' in self._data and (smooth_times >= 0 or time_list):
             # Build an observation array out of the real data first.
