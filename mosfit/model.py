@@ -551,8 +551,8 @@ class Model(object):
             else:
                 prt.prt(
                     '  (No optical/IR filter bands in this transient; fitting '
-                    'bolometric luminosity-only and/or radio points does not '
-                    'load SVO bands.)')
+                    'bolometric luminosity or M_bol and/or radio points does '
+                    'not load SVO bands.)')
 
             single_freq_inst = list(
                 sorted(set(np.array(outputs['instruments'])[

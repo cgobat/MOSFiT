@@ -19,6 +19,7 @@ from astrocats.catalog.source import SOURCE
 from schwimmbad import MPIPool, SerialPool
 from six import string_types
 
+from mosfit.constants import BOL_MAG_BAND_LABEL
 from mosfit.converter import Converter
 from mosfit.fetcher import Fetcher
 from mosfit.printer import Printer
@@ -592,11 +593,20 @@ class Fitter(object):
                         PHOTOMETRY.REALIZATION: str(ri)
                     }
                     if output['observation_types'][i] == 'magnitude':
-                        photodict[PHOTOMETRY.BAND] = output['bands'][i]
-                        photodict[PHOTOMETRY.
-                                  MAGNITUDE] = output['model_observations'][i]
-                        photodict[PHOTOMETRY.
-                                  E_MAGNITUDE] = output['model_variances'][i]
+                        bol_mag_row = (
+                            output['bands'][i] == BOL_MAG_BAND_LABEL)
+                        if bol_mag_row:
+                            photodict['mbol'] = output[
+                                'model_observations'][i]
+                            photodict['e_mbol'] = output[
+                                'model_variances'][i]
+                        else:
+                            photodict[PHOTOMETRY.BAND] = output[
+                                'bands'][i]
+                            photodict[PHOTOMETRY.MAGNITUDE] = (
+                                output['model_observations'][i])
+                            photodict[PHOTOMETRY.E_MAGNITUDE] = (
+                                output['model_variances'][i])
                     elif output['observation_types'][i] == 'magcount':
                         if output['model_observations'][i] == 0.0:
                             continue

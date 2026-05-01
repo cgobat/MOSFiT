@@ -2,7 +2,7 @@
 from collections import OrderedDict
 
 import numpy as np
-from mosfit.constants import BOL_BAND_INDEX
+from mosfit.constants import BOL_BAND_INDEX, BOL_MAG_BAND_LABEL
 from mosfit.modules.arrays.array import Array
 from mosfit.utils import frequency_unit
 
@@ -78,10 +78,12 @@ class AllTimes(Array):
                for x, y in zip(old_observations, self._all_observations)):
             self._all_band_indices = np.array([
                 (-1 if f is not None else (
-                    BOL_BAND_INDEX if _pure_luminosity_measure(msr) else
-                    self._photometry.find_band_index(
-                        b, telescope=t, instrument=i, mode=m, bandset=bs,
-                        system=s)))
+                    BOL_BAND_INDEX if _pure_luminosity_measure(msr) else (
+                        BOL_BAND_INDEX if (
+                            isinstance(b, str) and b == BOL_MAG_BAND_LABEL)
+                        else self._photometry.find_band_index(
+                            b, telescope=t, instrument=i, mode=m, bandset=bs,
+                            system=s))))
                 for ti, b, t, s, i, m, bs, f, uf, zps, msr, o in zip(
                     *self._all_observations)])
             self._zps = np.array(
@@ -92,7 +94,9 @@ class AllTimes(Array):
                 'magcount' if
                 ('countrate' in msr and 'magnitude' in msr and zp is not None
                  and self._model._fitter._prefer_fluxes) else
-                'luminosity' if bi == BOL_BAND_INDEX else
+                'luminosity' if (
+                    bi == BOL_BAND_INDEX and _pure_luminosity_measure(msr)) else
+                'magnitude' if bi == BOL_BAND_INDEX else
                 self._photometry._band_kinds[bi] if bi >= 0 else 'fluxdensity'
                 for bi, zp, msr in zip(self._all_band_indices,
                                        self._zps, self._measures)

@@ -16,7 +16,9 @@ from mosfit.constants import (
     C_CGS,
     FOUR_PI,
     H_C_ANG_CGS,
+    LBOL_SUN_CGS,
     MAG_FAC,
+    MBOL_SUN_MAG,
     MPC_CGS,
 )
 from mosfit.modules.module import Module
@@ -24,6 +26,21 @@ from mosfit.utils import get_url_file_handle, listify, open_atomic, syst_syns
 
 
 # Important: Only define one ``Module`` class per file.
+
+
+def luminosity_cgs_to_mbol(lum_cgs):
+    """Bolometric luminosity [erg/s] → absolute bolometric magnitude.
+
+    Calibration uses ``MBOL_SUN_MAG`` and ``LBOL_SUN_CGS`` consistent with the
+    model engine luminosity units.
+    """
+    lum_cgs = np.asarray(lum_cgs, dtype=np.float64)
+    out = np.full(np.shape(lum_cgs), np.nan, dtype=np.float64)
+    pos = np.isfinite(lum_cgs) & (lum_cgs > 0.0)
+    out[pos] = (
+        MBOL_SUN_MAG -
+        MAG_FAC * np.log10(lum_cgs[pos] / LBOL_SUN_CGS))
+    return out
 
 
 def _photometry_debug_enabled() -> bool:
@@ -527,12 +544,16 @@ class Photometry(Module):
             else:
                 eff_fluxes[li] = kwargs['seds'][li][0] / ANG_CGS * (
                     C_CGS / (self._frequencies[li] ** 2))
+        bi_arr = np.asarray(self._band_indices)
+        phot_band = bi_arr >= 0
         nbs = np.logical_and(
+            phot_band,
             self._observation_types != 'luminosity',
             np.logical_or(
                 self._observation_types == 'countrate',
                 self._observation_types == 'fluxdensity'))
         ybs = np.logical_and(
+            phot_band,
             self._observation_types != 'luminosity',
             np.logical_or(
                 self._observation_types == 'magnitude',
@@ -545,8 +566,14 @@ class Photometry(Module):
         model_observations[ybs] = self.abmag(eff_fluxes[ybs], offsets[ybs])
         model_observations[cbs] = 10.0 ** (-0.4 * (model_observations[
             cbs] - self._zps[cbs]))
-        model_observations[lum_mask] = np.asarray(
-            self._luminosities, dtype=float)[lum_mask]
+        lumo_dense = np.asarray(self._luminosities, dtype=np.float64)
+        model_observations[lum_mask] = lumo_dense[lum_mask]
+        mbol_fit_mask = np.logical_and(
+            bi_arr == BOL_BAND_INDEX,
+            self._observation_types == 'magnitude')
+        if np.any(mbol_fit_mask):
+            model_observations[mbol_fit_mask] = luminosity_cgs_to_mbol(
+                lumo_dense[mbol_fit_mask])
 
         # Get the per-point mask from Sampson, if present
         valid_mask = kwargs.get("sesn_valid_mask") 
