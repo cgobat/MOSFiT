@@ -10,9 +10,9 @@
     },
     "nhhost":{
         "kind":"parameter",
-        "value":1.0e18,
+        "value":1e+18,
         "class":"parameter",
-        "latex":"n_{\\rm H}^{\\rm host}\\,({\\rm cm}^{-2})",	
+        "latex":"n_{\\rm H}^{\\rm host}\\,({\\rm cm}^{-2})",
         "derived_keys":"avhost"
     },
     "texplosion":{
@@ -21,18 +21,18 @@
         "class":"parameter",
         "latex":"t_{\\rm exp}\\,{\\rm (days)}",
         "requests":{
-            "min_times": "transient"
-        }	
+            "min_times":"transient"
+        }
     },
     "Lat1sec":{
         "kind":"parameter",
-        "value":1.0e55,
+        "value":1e+55,
         "class":"parameter",
         "latex":"L_{\\rm 1}\\,({\\rm erg}\\,{\\rm s}^{-1})"
     },
     "ton":{
         "kind":"parameter",
-        "value":1e-5,
+        "value":1e-05,
         "class":"parameter",
         "latex":"T_{\\rm tr}\\,{\\rm (days)}"
     },
@@ -44,10 +44,10 @@
     },
     "kappagamma":{
         "kind":"parameter",
-        "value":1.0e10,
+        "value":10000000000.0,
         "class":"parameter",
         "latex":"\\kappa_\\gamma\\,({\\rm cm}^{2}\\,{\\rm g}^{-1})"
-    },    
+    },
     "mejecta":{
         "kind":"parameter",
         "value":1.0,
@@ -56,13 +56,13 @@
     },
     "vejecta":{
         "kind":"parameter",
-        "value":1.5e4,
+        "value":15000.0,
         "class":"parameter",
         "latex":"v_{\\rm ej}\\,({\\rm km\\,s}^{-1})"
     },
     "temperature":{
         "kind":"parameter",
-        "value":6.0e3,
+        "value":6000.0,
         "class":"parameter",
         "latex":"T_{\\min}\\,{\\rm (K)}"
     },
@@ -74,20 +74,20 @@
     },
     "neutrino_energy":{
         "kind":"parameter",
-        "value":1.0e51,
+        "value":1e+51,
         "class":"parameter",
         "latex":"E_{\\nu}"
-    },    
+    },
     "tnebular_min":{
         "kind":"parameter",
         "value":100.0,
         "class":"parameter",
         "latex":"t_{\\rm neb}"
-    },    
+    },
     "simplefallback":{
         "kind":"engine",
         "inputs":[
-            "densetimes",	    
+            "densetimes",
             "Lat1sec",
             "ton",
             "texplosion"
@@ -98,7 +98,7 @@
         "inputs":[
             "simplefallback",
             "kappa",
-            "kappagamma",	    
+            "kappagamma",
             "mejecta",
             "texplosion",
             "vejecta"
@@ -121,9 +121,9 @@
             "cutoff_wavelength"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
-    },    
+    },
     "losextinction":{
         "kind":"sed",
         "inputs":[
@@ -133,7 +133,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "photometry":{
@@ -141,6 +141,12 @@
         "inputs":[
             "losextinction",
             "lumdist"
+        ],
+        "supports":[
+            "ultraviolet",
+            "optical",
+            "infrared",
+            "bolometric"
         ]
     },
     "fallback_constraints":{
@@ -156,14 +162,14 @@
             "texplosion",
             "redshift",
             "alltimes",
-            "neutrino_energy"	    
+            "neutrino_energy"
         ]
-    },    
+    },
     "likelihood":{
         "kind":"objective",
         "inputs":[
             "diagonal",
             "fallback_constraints"
         ]
-    }    
+    }
 }

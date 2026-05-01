@@ -650,6 +650,11 @@ class Fitter(object):
                                    output['model_variances'][i] / 2.5) -
                             photodict[PHOTOMETRY.COUNT_RATE])
                         photodict[PHOTOMETRY.U_COUNT_RATE] = 's^-1'
+                    elif output['observation_types'][i] == 'luminosity':
+                        photodict['luminosity'] = float(
+                            output['model_observations'][i])
+                        photodict['e_luminosity'] = float(
+                            output['model_variances'][i])
                     if ('model_upper_limits' in output
                             and output['model_upper_limits'][i]):
                         photodict[PHOTOMETRY.UPPER_LIMIT] = bool(

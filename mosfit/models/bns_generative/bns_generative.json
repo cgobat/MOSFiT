@@ -27,7 +27,7 @@
     },
     "nhhost":{
         "kind":"parameter",
-        "value":1.0e16,
+        "value":1e+16,
         "class":"parameter",
         "latex":"n_{\\rm H,host}",
         "derived_keys":"avhost"
@@ -38,7 +38,7 @@
         "class":"parameter",
         "latex":"t_{\\rm exp}\\,{\\rm (days)}",
         "requests":{
-            "min_times": "transient"
+            "min_times":"transient"
         }
     },
     "temperature":{
@@ -230,7 +230,7 @@
             "cocoon_photosphere"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         },
         "replacements":{
             "luminosities":"luminosities_shock"
@@ -280,7 +280,7 @@
             "diffusion_aspherical"
         ],
         "replacements":{
-            "luminosities": "luminosities_blue",
+            "luminosities":"luminosities_blue",
             "vejecta":"vejecta_blue",
             "mejecta":"mejecta_blue",
             "kappa":"kappa_blue"
@@ -296,7 +296,7 @@
             "blackbody"
         ],
         "requests":{
-            "band_wave_ranges": "photometry",
+            "band_wave_ranges":"photometry",
             "seds":"blackbody"
         },
         "replacements":{
@@ -348,7 +348,7 @@
             "diffusion2"
         ],
         "replacements":{
-            "luminosities": "luminosities_red",
+            "luminosities":"luminosities_red",
             "vejecta":"vejecta_red",
             "mejecta":"mejecta_red",
             "kappa":"kappa_red"
@@ -364,7 +364,7 @@
             "blackbody1"
         ],
         "requests":{
-            "band_wave_ranges": "photometry",
+            "band_wave_ranges":"photometry",
             "seds":"blackbody1"
         },
         "replacements":{
@@ -414,7 +414,7 @@
             "diffusion3"
         ],
         "replacements":{
-            "luminosities": "luminosities_purple",
+            "luminosities":"luminosities_purple",
             "vejecta":"vejecta_purple",
             "mejecta":"mejecta_purple",
             "kappa":"kappa_purple"
@@ -430,7 +430,7 @@
             "blackbody2"
         ],
         "requests":{
-            "band_wave_ranges": "photometry",
+            "band_wave_ranges":"photometry",
             "seds":"blackbody2"
         },
         "replacements":{
@@ -446,7 +446,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         },
         "replacements":{
             "luminosities":"luminosities_purple"
@@ -457,7 +457,8 @@
         "supports":[
             "ultraviolet",
             "optical",
-            "infrared"
+            "infrared",
+            "bolometric"
         ],
         "inputs":[
             "losextinction",

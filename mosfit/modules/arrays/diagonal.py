@@ -28,7 +28,9 @@ class Diagonal(Array):
 
         ret = {}
 
-        allowed_otypes = ['countrate', 'magnitude', 'fluxdensity', 'magcount']
+        allowed_otypes = [
+            'countrate', 'magnitude', 'fluxdensity', 'magcount',
+            'luminosity']
 
         if np.any([x not in allowed_otypes for x in self._o_types]):
             print([x for x in self._o_types if x not in allowed_otypes])
@@ -42,12 +44,15 @@ class Diagonal(Array):
             ((abs(x - y) if (not u and y is not None) or (
                 not isnan(x) and y is not None and x < y) else 0.0)
              if t == 'magnitude' else
-             ((abs(x - fd) if (not u and fd is not None) or (
-                 not isnan(x) and fd is not None and x > fd) else 0.0)
-              if t == 'fluxdensity' else None))
-            for x, y, ct, fd, u, t in zip(
-                self._model_observations, self._mags, self._cts, self._fds,
-                self._upper_limits, self._o_types)
+             ((abs(x - lum) if (not u and lum is not None) or (
+                 not isnan(x) and lum is not None and x < lum) else 0.0)
+              if t == 'luminosity' else
+              ((abs(x - fd) if (not u and fd is not None) or (
+                  not isnan(x) and fd is not None and x > fd) else 0.0)
+               if t == 'fluxdensity' else None)))
+            for x, y, lum, ct, fd, u, t in zip(
+                self._model_observations, self._mags, self._lums,
+                self._cts, self._fds, self._upper_limits, self._o_types)
         ])
 
         if np.any(residuals == None):  # noqa: E711
@@ -59,12 +64,16 @@ class Diagonal(Array):
             if (t == 'countrate' or t == 'magcount') else
             ((el if (y is None or x > y) else eu))
             if t == 'magnitude' else
+            ((lm_el if (lum is None or x > lum) else lm_eu))
+            if t == 'luminosity' else
             ((fdel if (fd is not None and x > fd) else fdeu))
             if t == 'fluxdensity' else None
-            for x, y, eu, el, fd, fdeu, fdel, ct, ctel, cteu, t in zip(
-                self._model_observations, self._mags,
-                self._e_u_mags, self._e_l_mags, self._fds, self._e_u_fds,
-                self._e_l_fds, self._cts, self._e_l_cts, self._e_u_cts,
+            for x, y, lum, eu, el, lm_eu, lm_el, fd, fdeu, fdel, ct,
+            ctel, cteu, t in zip(
+                self._model_observations, self._mags, self._lums,
+                self._e_u_mags, self._e_l_mags, self._e_u_lums, self._e_l_lums,
+                self._fds, self._e_u_fds, self._e_l_fds, self._cts,
+                self._e_l_cts, self._e_u_cts,
                 self._o_types)
         ]
         diag = [0.0 if x is None else x for x in diag]
@@ -98,11 +107,15 @@ class Diagonal(Array):
             return
         self._observation_types = otypes
         self._mags = np.array(kwargs.get('magnitudes', []))
+        self._lums = np.array(kwargs.get('observed_luminosities', []))
         self._fds = np.array(kwargs.get('fluxdensities', []))
         self._cts = np.array(kwargs.get('countrates', []))
         self._e_u_mags = kwargs.get('e_upper_magnitudes', [])
         self._e_l_mags = kwargs.get('e_lower_magnitudes', [])
         self._e_mags = kwargs.get('e_magnitudes', [])
+        self._e_u_lums = kwargs.get('e_upper_observed_luminosities', [])
+        self._e_l_lums = kwargs.get('e_lower_observed_luminosities', [])
+        self._e_lums_sym = kwargs.get('e_observed_luminosities', [])
         self._e_u_fds = kwargs.get('e_upper_fluxdensities', [])
         self._e_l_fds = kwargs.get('e_lower_fluxdensities', [])
         self._e_fds = kwargs.get('e_fluxdensities', [])
@@ -132,6 +145,21 @@ class Diagonal(Array):
             (kwargs['default_no_error_bar_error']
              if (e is None and el is None) else (e if el is None else el))
             for i, (e, el) in enumerate(zip(self._e_mags, self._e_l_mags))
+        ]
+
+        self._e_u_lums = [
+            kwargs['default_upper_limit_error']
+            if (e is None and eu is None and self._upper_limits[i]) else
+            (kwargs['default_no_error_bar_error']
+             if (e is None and eu is None) else (e if eu is None else eu))
+            for i, (e, eu) in enumerate(zip(self._e_lums_sym, self._e_u_lums))
+        ]
+        self._e_l_lums = [
+            kwargs['default_upper_limit_error']
+            if (e is None and el is None and self._upper_limits[i]) else
+            (kwargs['default_no_error_bar_error']
+             if (e is None and el is None) else (e if el is None else el))
+            for i, (e, el) in enumerate(zip(self._e_lums_sym, self._e_l_lums))
         ]
 
         # Ignore upperlimits for countrate if magnitude is present.

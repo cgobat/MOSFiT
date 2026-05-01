@@ -12,6 +12,17 @@ from mosfit.utils import listify
 # Important: Only define one ``Module`` class per file.
 
 
+# Maps catalog photometry subkeys → ``_data`` array names. (``luminosity`` must not
+# pluralize to ``luminosities`` — that key is reserved for model SED normalization.)
+_PHOTOMETRY_DATA_KEYS = {
+    'luminosity': 'observed_luminosities',
+    'e_luminosity': 'e_observed_luminosities',
+    'e_upper_luminosity': 'e_upper_observed_luminosities',
+    'e_lower_luminosity': 'e_lower_observed_luminosities',
+    'u_luminosity': 'u_observed_luminosities',
+}
+
+
 class Transient(Module):
     """Structure to store transient data."""
 
@@ -170,9 +181,19 @@ class Transient(Module):
                         ])
                         if no_other_phot:
                             self._kinds_needed.add('bolometric')
+                            ph_task = (
+                                self._model._call_stack.get('photometry', {}))
+                            ph_sup = ph_task.get('supports', ())
+                            bolometric_ok = isinstance(
+                                ph_sup, (list, tuple)) and (
+                                    'bolometric' in ph_sup)
+                            # ``_kinds_supported`` during ``load_data`` may not
+                            # yet include photometry when ``transient`` runs early
+                            # in iteration order — use merged task JSON ``supports``.
                             if ('bolometric' in ex_kinds or (
-                                    (not len(ex_kinds) or 'none' not in ex_kinds)
-                                    and 'bolometric' not in self._model._kinds_supported)):
+                                    (not len(ex_kinds)
+                                     or 'none' not in ex_kinds)
+                                    and not bolometric_ok)):
                                 continue
                     if 'magnitude' in entry:
                         # For now, magnitudes are not excludable.
@@ -248,7 +269,10 @@ class Transient(Module):
                         if not skip_key:
                             self._data[key] = entry.get(x, falseval)
                     else:
-                        plural = self._model.plural(x)
+                        if key == 'photometry' and x in _PHOTOMETRY_DATA_KEYS:
+                            plural = _PHOTOMETRY_DATA_KEYS[x]
+                        else:
+                            plural = self._model.plural(x)
                         val = entry.get(x, falseval)
                         if x in num_subkeys:
                             val = None if val is None else np.mean([
@@ -265,7 +289,7 @@ class Transient(Module):
                 'magnitudes',
                 'frequencies',
                 'countrates',
-                'luminosities']]):
+                'observed_luminosities']]):
             prt.message('no_fittable_data', [name])
             return False
 
@@ -289,7 +313,7 @@ class Transient(Module):
                 'magnitudes',
                 'countrates',
                 'fluxdensities',
-                'luminosities']):
+                'observed_luminosities']):
             # Add a list of tags for each observation to indicate what unit
             # observation is provided in.
             self._data['measures'] = [(
@@ -301,7 +325,7 @@ class Transient(Module):
                     self._data['magnitudes'],
                     self._data['countrates'],
                     self._data['fluxdensities'],
-                    self._data['luminosities']))]
+                    self._data['observed_luminosities']))]
 
         if 'times' in self._data and (smooth_times >= 0 or time_list):
             # Build an observation array out of the real data first.

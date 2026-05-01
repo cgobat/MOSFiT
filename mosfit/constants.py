@@ -25,6 +25,10 @@ MEV_CGS = u.MeV.cgs.scale
 MAG_FAC = 2.5
 MPC_CGS = u.Mpc.cgs.scale
 
+# ``all_band_indices`` sentinel for bolometric / intrinsic luminosity rows
+# (catalog ``luminosity`` field); distinct from radio ``band_index == -1``.
+BOL_BAND_INDEX = -2
+
 KS_DAYS = float(Decimal('1000') / Decimal(DAY_CGS))
 H_C_CGS = H_CGS * C_CGS
 H_C_ANG_CGS = H_C_CGS / ANG_CGS

@@ -7,7 +7,7 @@ from astrocats.catalog.source import SOURCE
 from astropy import constants as c
 from astropy import units as u
 
-from mosfit.constants import ANG_CGS, FOUR_PI
+from mosfit.constants import ANG_CGS, BOL_BAND_INDEX, FOUR_PI
 from mosfit.modules.seds.sed import SED
 
 # Important: Only define one ``Module`` class per file.
@@ -108,6 +108,9 @@ class BlackbodyCutoff(SED):
         evaled = False
         for li, lum in enumerate(self._luminosities):
             bi = self._band_indices[li]
+            if bi == BOL_BAND_INDEX:
+                seds[li] = np.zeros(1)
+                continue
             if lum == 0.0:
                 seds[li] = np.zeros(
                     len(self._sample_wavelengths[bi]) if bi >= 0 else 1)

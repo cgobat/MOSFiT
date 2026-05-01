@@ -10,8 +10,15 @@ import numpy as np
 from astropy import constants as c
 from astropy import units as u
 from astropy.io.votable import parse as voparse
-from mosfit.constants import (ANG_CGS, C_CGS, FOUR_PI, H_C_ANG_CGS, MAG_FAC,
-                              MPC_CGS)
+from mosfit.constants import (
+    ANG_CGS,
+    BOL_BAND_INDEX,
+    C_CGS,
+    FOUR_PI,
+    H_C_ANG_CGS,
+    MAG_FAC,
+    MPC_CGS,
+)
 from mosfit.modules.module import Module
 from mosfit.utils import get_url_file_handle, listify, open_atomic, syst_syns
 
@@ -496,6 +503,8 @@ class Photometry(Module):
         model_observations = np.zeros_like(self._luminosities)
         for li, lum in enumerate(self._luminosities):
             bi = self._band_indices[li]
+            if bi == BOL_BAND_INDEX:
+                continue
             if bi >= 0:
                 if (self._observation_types[li] == 'magnitude' or
                         self._observation_types[li] == 'magcount'):
@@ -518,19 +527,26 @@ class Photometry(Module):
             else:
                 eff_fluxes[li] = kwargs['seds'][li][0] / ANG_CGS * (
                     C_CGS / (self._frequencies[li] ** 2))
-        nbs = np.logical_or(
-            self._observation_types == 'countrate',
-            self._observation_types == 'fluxdensity')
-        ybs = np.logical_or(
-            self._observation_types == 'magnitude',
-            self._observation_types == 'magcount')
+        nbs = np.logical_and(
+            self._observation_types != 'luminosity',
+            np.logical_or(
+                self._observation_types == 'countrate',
+                self._observation_types == 'fluxdensity'))
+        ybs = np.logical_and(
+            self._observation_types != 'luminosity',
+            np.logical_or(
+                self._observation_types == 'magnitude',
+                self._observation_types == 'magcount'))
         cbs = self._observation_types == 'magcount'
 
+        lum_mask = self._observation_types == 'luminosity'
 
         model_observations[nbs] = eff_fluxes[nbs] / self._dist_const
         model_observations[ybs] = self.abmag(eff_fluxes[ybs], offsets[ybs])
         model_observations[cbs] = 10.0 ** (-0.4 * (model_observations[
             cbs] - self._zps[cbs]))
+        model_observations[lum_mask] = np.asarray(
+            self._luminosities, dtype=float)[lum_mask]
 
         # Get the per-point mask from Sampson, if present
         valid_mask = kwargs.get("sesn_valid_mask") 

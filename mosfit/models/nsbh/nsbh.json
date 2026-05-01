@@ -27,7 +27,7 @@
     },
     "nhhost":{
         "kind":"parameter",
-        "value":1.0e16,
+        "value":1e+16,
         "class":"parameter",
         "latex":"n_{\\rm H,host}",
         "derived_keys":"avhost"
@@ -38,7 +38,7 @@
         "class":"parameter",
         "latex":"t_{\\rm exp}\\,{\\rm (days)}",
         "requests":{
-            "min_times": "transient"
+            "min_times":"transient"
         }
     },
     "temperature":{
@@ -112,7 +112,7 @@
     },
     "cos_theta":{
         "kind":"parameter",
-        "value":0.8660,
+        "value":0.866,
         "class":"parameter",
         "latex":"\\cos\\theta"
     },
@@ -252,7 +252,7 @@
             "diffusion_aspherical"
         ],
         "replacements":{
-            "luminosities": "luminosities_thermal_blue",
+            "luminosities":"luminosities_thermal_blue",
             "vejecta":"vejecta_thermal",
             "mejecta":"mejecta_thermal_blue",
             "kappa":"kappa_thermal_blue"
@@ -267,7 +267,7 @@
             "temperature_floor"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         },
         "replacements":{
             "luminosities":"luminosities_thermal_blue"
@@ -339,7 +339,7 @@
             "diffusion1b"
         ],
         "replacements":{
-            "luminosities": "luminosities_thermal_purple",
+            "luminosities":"luminosities_thermal_purple",
             "vejecta":"vejecta_thermal",
             "mejecta":"mejecta_thermal_purple",
             "kappa":"kappa_thermal_purple"
@@ -355,7 +355,7 @@
             "blackbody"
         ],
         "requests":{
-            "band_wave_ranges": "photometry",
+            "band_wave_ranges":"photometry",
             "seds":"blackbody"
         },
         "replacements":{
@@ -407,7 +407,7 @@
             "diffusion2"
         ],
         "replacements":{
-            "luminosities": "luminosities_magnetic",
+            "luminosities":"luminosities_magnetic",
             "vejecta":"vejecta_magnetic",
             "mejecta":"mejecta_magnetic",
             "kappa":"kappa_magnetic"
@@ -423,7 +423,7 @@
             "blackbody1"
         ],
         "requests":{
-            "band_wave_ranges": "photometry",
+            "band_wave_ranges":"photometry",
             "seds":"blackbody1"
         },
         "replacements":{
@@ -491,7 +491,7 @@
             "blackbody2"
         ],
         "requests":{
-            "band_wave_ranges": "photometry",
+            "band_wave_ranges":"photometry",
             "seds":"blackbody2"
         },
         "replacements":{
@@ -507,7 +507,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         },
         "replacements":{
             "luminosities":"luminosities_dyn"
@@ -518,7 +518,8 @@
         "supports":[
             "ultraviolet",
             "optical",
-            "infrared"
+            "infrared",
+            "bolometric"
         ],
         "inputs":[
             "losextinction",

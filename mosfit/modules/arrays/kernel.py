@@ -4,7 +4,7 @@ from collections import OrderedDict
 import numpy as np
 from six import string_types
 
-from mosfit.constants import ANG_CGS, C_CGS
+from mosfit.constants import ANG_CGS, BOL_BAND_INDEX, C_CGS
 from mosfit.modules.arrays.array import Array
 
 # Important: Only define one ``Module`` class per file.
@@ -32,9 +32,10 @@ class Kernel(Array):
         # Get array of real observations.
         self._observations = np.array([
             ct if (t == 'countrate' or t == 'magcount') else y if
-            (t == 'magnitude') else fd if t == 'fluxdensity' else None
-            for y, ct, fd, t in zip(self._mags, self._cts, self._fds,
-                                    self._o_otypes)
+            (t == 'magnitude') else lum if t == 'luminosity' else fd if
+            t == 'fluxdensity' else None
+            for y, ct, fd, lum, t in zip(
+                self._mags, self._cts, self._fds, self._lums, self._o_otypes)
         ])
 
         # Get array of model observations.
@@ -91,16 +92,22 @@ class Kernel(Array):
         self._mags = np.array(kwargs.get('magnitudes', []))
         self._fds = np.array(kwargs.get('fluxdensities', []))
         self._cts = np.array(kwargs.get('countrates', []))
+        self._lums = np.array(kwargs.get('observed_luminosities', []))
         self._u_freqs = kwargs.get('all_u_frequencies', [])
+        ai = np.asarray(self._all_band_indices)
         self._waves = np.array([
             self._average_wavelengths[bi]
-            if bi >= 0 else C_CGS / self._freqs[i] / ANG_CGS
-            for i, bi in enumerate(self._all_band_indices)
+            if bi >= 0 else (
+                np.nan if bi == BOL_BAND_INDEX else
+                C_CGS / self._freqs[i] / ANG_CGS)
+            for i, bi in enumerate(ai)
         ])
         self._observed = np.array(kwargs.get('observed', []), dtype=bool)
         self._observation_types = kwargs.get('observation_types')
         self._n_obs = len(self._observed)
-        self._count_inds = self._observation_types != 'magnitude'
+        self._count_inds = np.logical_and(
+            self._observation_types != 'magnitude',
+            self._observation_types != 'luminosity')
 
         self._o_times = self._times[self._observed]
         self._o_waves = self._waves[self._observed]

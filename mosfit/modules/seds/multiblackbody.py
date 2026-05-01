@@ -20,6 +20,7 @@ class MultiBlackbody(SED):
 
     def process(self, **kwargs):
         """Process module."""
+        # When implementing, handle ``BOL_BAND_INDEX`` rows like ``blackbody.py``.
         raise NotImplementedError('`MultiBlackbody` is not yet functional.')
         kwargs = self.prepare_input(self.key('luminosities'), **kwargs)
         self._luminosities = kwargs[self.key('luminosities')]

@@ -5,7 +5,7 @@ import numexpr as ne
 import numpy as np
 from astropy import constants as c
 from astropy import units as u
-from mosfit.constants import FOUR_PI
+from mosfit.constants import BOL_BAND_INDEX, FOUR_PI
 from mosfit.modules.seds.sed import SED
 
 
@@ -49,6 +49,9 @@ class Blackbody(SED):
         #print("in blackbody, self._luminosities: "+str(self._luminosities))
         for li, lum in enumerate(self._luminosities):
             bi = self._band_indices[li]
+            if bi == BOL_BAND_INDEX:
+                seds.append(np.zeros(1))
+                continue
             if lum == 0.0:
                 seds.append(np.zeros(len(
                     self._sample_wavelengths[bi]) if bi >= 0 else 1))

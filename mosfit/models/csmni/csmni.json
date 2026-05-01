@@ -16,7 +16,7 @@
     },
     "lumdist":{
         "kind":"parameter",
-        "value":1.0e-5,
+        "value":1e-05,
         "class":"parameter",
         "latex":"d"
     },
@@ -39,7 +39,7 @@
         "class":"parameter",
         "latex":"t_{\\rm exp}\\,{\\rm (days)}",
         "requests":{
-            "min_times": "transient"
+            "min_times":"transient"
         }
     },
     "n":{
@@ -86,7 +86,7 @@
     },
     "rho":{
         "kind":"parameter",
-        "value":1.0e-12,
+        "value":1e-12,
         "class":"parameter",
         "latex":"\\rho"
     },
@@ -121,7 +121,6 @@
         "class":"parameter",
         "latex":"T_{\\min}\\,{\\rm (K)}"
     },
-
     "nickelcobalt":{
         "kind":"engine",
         "inputs":[
@@ -131,7 +130,7 @@
             "texplosion"
         ],
         "replacements":{
-            "luminosities": "nico_luminosities"
+            "luminosities":"nico_luminosities"
         }
     },
     "csm":{
@@ -153,7 +152,7 @@
             "densetimes"
         ],
         "replacements":{
-            "luminosities": "csm_luminosities"
+            "luminosities":"csm_luminosities"
         }
     },
     "mdiffusion":{
@@ -183,8 +182,8 @@
             "homologous_expansion"
         ],
         "replacements":{
-            "luminosities": "nico_luminosities",
-            "mejecta": "mdiffusion"
+            "luminosities":"nico_luminosities",
+            "mejecta":"mdiffusion"
         }
     },
     "diffusion_csm":{
@@ -201,7 +200,7 @@
             "homologous_expansion"
         ],
         "replacements":{
-            "luminosities": "csm_luminosities"
+            "luminosities":"csm_luminosities"
         }
     },
     "total_luminosity":{
@@ -227,7 +226,7 @@
             "temperature"
         ],
         "replacements":{
-            "luminosities": "luminosities"
+            "luminosities":"luminosities"
         }
     },
     "blackbody":{
@@ -238,7 +237,7 @@
             "temperature_floor"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "csmconstraints":{
@@ -264,7 +263,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "photometry":{
@@ -272,6 +271,12 @@
         "inputs":[
             "losextinction",
             "lumdist"
+        ],
+        "supports":[
+            "ultraviolet",
+            "optical",
+            "infrared",
+            "bolometric"
         ]
     }
 }
