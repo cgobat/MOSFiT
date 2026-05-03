@@ -17,7 +17,6 @@ from mosfit.utils import is_number, listify, pretty_num
 from schwimmbad import SerialPool
 # from scipy.optimize import differential_evolution
 from scipy.optimize import minimize
-from six import string_types
 
 
 # from scipy.optimize import basinhopping
@@ -82,7 +81,7 @@ class Model(object):
             types_path = os.path.join(self._dir_path, 'models',
                                       'types.json')
         with open(types_path, 'r') as f:
-            model_types = json.load(f, object_pairs_hook=OrderedDict)
+            model_types = json.load(f)
 
         # Create list of all available models.
         all_models = set()
@@ -147,7 +146,7 @@ class Model(object):
                                             'model.json')
 
         with open(basic_model_path, 'r') as f:
-            self._model = json.load(f, object_pairs_hook=OrderedDict)
+            self._model = json.load(f)
 
         # Load the model file.
         model = self._model_name
@@ -169,7 +168,7 @@ class Model(object):
                                           model)
 
         with open(model_path, 'r') as f:
-            self._model.update(json.load(f, object_pairs_hook=OrderedDict))
+            self._model.update(json.load(f))
 
         # Find @ tags, store them, and prune them from `_model`.
         for tag in list(self._model.keys()):
@@ -270,7 +269,7 @@ class Model(object):
 
         # Currently just have one call stack for all products, can be wasteful
         # if only using some products.
-        self._call_stack = OrderedDict()
+        self._call_stack = {}
         for depth in range(self._max_depth_all, -1, -1):
             for task in unsorted_call_stack:
                 if unsorted_call_stack[task]['depth'] == depth:
@@ -304,6 +303,7 @@ class Model(object):
 
         # Count free parameters.
         self.determine_free_parameters()
+        self._setup_runtime_caches()
 
     def get_products_path(self):
         """Get path to products."""
@@ -394,6 +394,7 @@ class Model(object):
                     released_parameters.append(task)
 
         self.determine_free_parameters(fixed_parameters, released_parameters)
+        self._setup_runtime_caches()
 
         for ti, task in enumerate(self._call_stack):
             cur_task = self._call_stack[task]
@@ -404,10 +405,10 @@ class Model(object):
             if cur_task['kind'] == 'data':
                 success = self._modules[task].set_data(
                     data,
-                    req_key_values=OrderedDict((
-                        ('band', self._bands),
-                        ('instrument', self._instruments),
-                        ('telescope', self._telescopes))),
+                    req_key_values={
+                        'band': self._bands,
+                        'instrument': self._instruments,
+                        'telescope': self._telescopes},
                     subtract_minimum_keys=['times'],
                     smooth_times=smooth_times,
                     extrapolate_time=extrapolate_time,
@@ -442,6 +443,7 @@ class Model(object):
         # Determine free parameters again as setting data may have fixed some
         # more.
         self.determine_free_parameters(fixed_parameters, released_parameters)
+        self._setup_runtime_caches()
 
         self.exchange_requests()
 
@@ -458,6 +460,7 @@ class Model(object):
 
         # Determine free parameters again as above may have changed them.
         self.determine_free_parameters(fixed_parameters, released_parameters)
+        self._setup_runtime_caches()
 
         self.determine_number_of_measurements()
 
@@ -639,6 +642,18 @@ class Model(object):
                 self._user_fixed_parameters.append(task)
         self._num_free_parameters = len(self._free_parameters)
 
+    def _setup_runtime_caches(self):
+        """Build cached task lists and lookup tables used during evaluation."""
+        self._free_parameter_indices = {
+            task: index for index, task in enumerate(self._free_parameters)
+        }
+        self._root_task_lists = {}
+        for root in ('objective', 'output'):
+            self._root_task_lists[root] = [
+                (task, self._call_stack[task]) for task in self._call_stack
+                if root in self._call_stack[task]['roots']
+            ]
+
     def is_parameter_fixed_by_user(self, parameter):
         """Return whether a parameter is fixed by the user."""
         return parameter in self._user_fixed_parameters
@@ -745,7 +760,7 @@ class Model(object):
                 for inps in inputs:
                     conditional = False
                     if isinstance(inps, list) and not isinstance(
-                            inps, string_types) and inps[-1] == "conditional":
+                            inps, str) and inps[-1] == "conditional":
                         inp = inps[0]
                         conditional = True
                     else:
@@ -944,8 +959,8 @@ class Model(object):
         Run a stack of modules as defined in the model definition file. Only
         run functions that match the specified root.
         """
-        inputs = OrderedDict()
-        outputs = OrderedDict()
+        inputs = {}
+        outputs = {}
         pos = 0
         cur_depth = self._max_depth_all
 
@@ -954,13 +969,12 @@ class Model(object):
         if build_refs:
             self._references[root] = []
 
-        for task in self._call_stack:
-            cur_task = self._call_stack[task]
+        for task, cur_task in self._call_stack.items():
             if root not in cur_task['roots']:
                 continue
             if cur_task['depth'] != cur_depth:
                 inputs = outputs
-            inputs.update(OrderedDict([('root', root)]))
+            inputs['root'] = root
             cur_depth = cur_task['depth']
             if task in self._free_parameters:
                 inputs.update(OrderedDict([('fraction', x[pos])]))
@@ -972,20 +986,21 @@ class Model(object):
                     new_outs = OrderedDict(sorted(new_outs.items()))
             except Exception:
                 self._printer.prt(
-                    "Failed to execute module `{}`\'s process().".format(task),
+                    "Failed to execute module `{}'s process().".format(task),
                     wrapped=True)
                 raise
 
-            outputs.update(new_outs)
+            if new_outs:
+                outputs.update(new_outs)
 
             # Append module references
             if build_refs:
                 self._references[root].extend(self._modules[task]._REFERENCES)
 
-            if '_delete_keys' in outputs:
-                for key in list(outputs['_delete_keys'].keys()):
-                    del outputs[key]
-                del outputs['_delete_keys']
+            delete_keys = outputs.pop('_delete_keys', None)
+            if delete_keys is not None:
+                for key in delete_keys:
+                    outputs.pop(key, None)
 
         if build_refs:
             # Make sure references are unique.

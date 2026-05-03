@@ -2,7 +2,6 @@
 from collections import OrderedDict
 
 import numpy as np
-from six import string_types
 
 from mosfit.constants import ANG_CGS, C_CGS
 from mosfit.modules.arrays.array import Array
@@ -27,7 +26,7 @@ class Kernel(Array):
         """Process module."""
         self.preprocess(**kwargs)
 
-        ret = OrderedDict()
+        ret = {}
 
         # If we are trying to krig between observations, we need an array with
         # dimensions equal to the number of intermediate observations.
@@ -67,7 +66,7 @@ class Kernel(Array):
 
             self._band_vs = np.array([
                 self._band_v_vars.get(i, self._variance) if isinstance(
-                    i, string_types) else
+                    i, str) else
                 (i[0] * self._band_v_vars.get(i[1][0], self._variance) +
                  (1.0 - i[0]) * self._band_v_vars.get(i[1][0], self._variance))
                 for i in self._o_variance_bands
@@ -140,7 +139,7 @@ class Kernel(Array):
         self._observed = np.array(kwargs.get('observed', []), dtype=bool)
         self._observation_types = kwargs.get('observation_types')
         self._n_obs = len(self._observed)
-        self._count_inds = self._observation_types != 'magnitude'
+        self._count_inds = np.asarray(self._observation_types) != 'magnitude'
 
         self._o_times = self._times[self._observed]
         self._o_waves = self._waves[self._observed]
