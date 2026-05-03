@@ -2,7 +2,6 @@
 from collections import OrderedDict
 
 import numpy as np
-from six import string_types
 
 from mosfit.constants import ANG_CGS, BOL_BAND_INDEX, C_CGS
 from mosfit.modules.arrays.array import Array
@@ -24,7 +23,7 @@ class Kernel(Array):
         """Process module."""
         self.preprocess(**kwargs)
 
-        ret = OrderedDict()
+        ret = {}
 
         # Get band variances
         self._variance = kwargs.get(self.key('variance'), 0.0)
@@ -54,7 +53,7 @@ class Kernel(Array):
 
             self._band_vs = np.array([
                 self._band_v_vars.get(i, self._variance) if isinstance(
-                    i, string_types) else
+                    i, str) else
                 (i[0] * self._band_v_vars.get(i[1][0], self._variance) +
                  (1.0 - i[0]) * self._band_v_vars.get(i[1][0], self._variance))
                 for i in self._o_variance_bands
