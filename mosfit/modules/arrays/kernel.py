@@ -1,5 +1,4 @@
 """Definitions for the `Kernel` class."""
-from collections import OrderedDict
 
 import numpy as np
 
@@ -54,7 +53,7 @@ class Kernel(Array):
         self._model_observations = kwargs.get('model_observations', [])
 
         # Handle band-specific variances if that option is enabled.
-        self._band_v_vars = OrderedDict()
+        self._band_v_vars = {}
         for key in kwargs:
             if key.startswith('variance-band-'):
                 self._band_v_vars[key.split('-')[-1]] = kwargs[key]

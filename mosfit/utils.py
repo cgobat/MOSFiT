@@ -9,7 +9,6 @@ import re
 import sys
 import tempfile
 from builtins import bytes, str
-from collections import OrderedDict
 from contextlib import contextmanager
 from math import floor, isnan, log10
 
@@ -193,7 +192,7 @@ def hash_bytes(input_string):
 
 def get_model_hash(modeldict, ignore_keys=[]):
     """Return a unique hash for the given model."""
-    newdict = OrderedDict()
+    newdict = {}
     for key in modeldict:
         if key not in ignore_keys:
             newdict[key] = modeldict[key]

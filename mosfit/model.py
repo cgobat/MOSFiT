@@ -3,7 +3,6 @@ import importlib
 import inspect
 import json
 import os
-from collections import OrderedDict
 from copy import deepcopy
 from difflib import get_close_matches
 from math import isnan
@@ -58,7 +57,7 @@ class Model(object):
         self._inflect = inflect.engine()
         self._test = test
         self._inflections = {}
-        self._references = OrderedDict()
+        self._references = {}
         self._free_parameters = []
         self._user_fixed_parameters = []
         self._user_released_parameters = []
@@ -219,8 +218,8 @@ class Model(object):
                         wrapped=False)
 
         with open(pp, 'r') as f:
-            self._parameter_json = json.load(f, object_pairs_hook=OrderedDict)
-        self._modules = OrderedDict()
+            self._parameter_json = json.load(f)
+        self._modules = {}
         self._bands = []
         self._instruments = []
         self._telescopes = []
@@ -230,8 +229,8 @@ class Model(object):
         # combining trees.
         root_kinds = ['output', 'objective']
 
-        self._trees = OrderedDict()
-        self._simple_trees = OrderedDict()
+        self._trees = {}
+        self._simple_trees = {}
         self.construct_trees(
             self._model, self._trees, self._simple_trees, kinds=root_kinds)
 
@@ -239,7 +238,7 @@ class Model(object):
             self._printer.prt('Dependency trees:\n', wrapped=True)
             self._printer.tree(self._simple_trees)
 
-        unsorted_call_stack = OrderedDict()
+        unsorted_call_stack = {}
         self._max_depth_all = -1
         for tag in self._model:
             model_tag = self._model[tag]
@@ -547,7 +546,7 @@ class Model(object):
         needs_general_variance = any(
             np.array(output.get('all_band_indices', [])) < 0)
 
-        new_call_stack = OrderedDict()
+        new_call_stack = {}
         for task in self._call_stack:
             cur_task = self._call_stack[task]
             vfe = listify(variance_for_each)
@@ -667,7 +666,7 @@ class Model(object):
         for task in reversed(self._call_stack):
             cur_task = self._call_stack[task]
             if 'requests' in cur_task:
-                requests = OrderedDict()
+                requests = {}
                 reqs = cur_task['requests']
                 for req in reqs:
                     if reqs[req] not in self._modules:
@@ -755,7 +754,7 @@ class Model(object):
                     new_roots.append(entry['kind'])
                 entry['roots'] = list(sorted(set(new_roots)))
                 trees[tag] = entry
-                simple[tag] = OrderedDict()
+                simple[tag] = {}
                 inputs = listify(entry.get('inputs', []))
                 for inps in inputs:
                     conditional = False
@@ -778,8 +777,8 @@ class Model(object):
                     # Conditional inputs don't propagate down the tree.
                     if conditional:
                         continue
-                    children = OrderedDict()
-                    simple_children = OrderedDict()
+                    children = {}
+                    simple_children = {}
                     self.construct_trees(
                         d,
                         children,
@@ -787,7 +786,7 @@ class Model(object):
                         name=inp,
                         roots=new_roots,
                         depth=depth + 1)
-                    trees[tag].setdefault('children', OrderedDict())
+                    trees[tag].setdefault('children', {})
                     trees[tag]['children'].update(children)
                     simple[tag].update(simple_children)
 
@@ -961,29 +960,32 @@ class Model(object):
         """
         inputs = {}
         outputs = {}
-        pos = 0
+        fractions = []
         cur_depth = self._max_depth_all
+        free_parameter_indices = self._free_parameter_indices
 
         # If this is the first time running this stack, build the ref arrays.
         build_refs = root not in self._references
         if build_refs:
             self._references[root] = []
 
-        for task, cur_task in self._call_stack.items():
-            if root not in cur_task['roots']:
-                continue
+        for task, cur_task in self._root_task_lists[root]:
             if cur_task['depth'] != cur_depth:
                 inputs = outputs
             inputs['root'] = root
             cur_depth = cur_task['depth']
-            if task in self._free_parameters:
-                inputs.update(OrderedDict([('fraction', x[pos])]))
-                inputs.setdefault('fractions', []).append(x[pos])
-                pos = pos + 1
+            fp_index = free_parameter_indices.get(task)
+            if fp_index is not None:
+                fraction = x[fp_index]
+                inputs['fraction'] = fraction
+                fractions.append(fraction)
+                inputs['fractions'] = fractions
+            elif 'fraction' in inputs:
+                inputs.pop('fraction', None)
+                inputs['fractions'] = fractions
+
             try:
                 new_outs = self._modules[task].process(**inputs)
-                if not isinstance(new_outs, OrderedDict):
-                    new_outs = OrderedDict(sorted(new_outs.items()))
             except Exception:
                 self._printer.prt(
                     "Failed to execute module `{}'s process().".format(task),
