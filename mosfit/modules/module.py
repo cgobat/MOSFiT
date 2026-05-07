@@ -1,6 +1,5 @@
 """Definitions for the ``Module`` class."""
 import json
-from collections import OrderedDict
 
 import numpy as np
 
@@ -25,7 +24,7 @@ class Module(object):
         self._preprocessed = False
         self._wants_dense = False
         self._provide_dense = False
-        self._replacements = OrderedDict()
+        self._replacements = {}
         self._unset_recommended_keys = set()
         self._kinds_needed = set()
         if not model.printer():
@@ -48,7 +47,7 @@ class Module(object):
 
     def process(self):
         """Process module, should always return a dictionary."""
-        return OrderedDict()
+        return dict()
 
     def reset_preprocessed(self, exceptions):
         """Reset preprocessed flag."""
@@ -72,7 +71,7 @@ class Module(object):
 
     def set_attributes(self, task):
         """Set key replacement dictionary."""
-        self._replacements = task.get('replacements', OrderedDict())
+        self._replacements = task.get('replacements', {})
         if 'wants_dense' in task:
             self._wants_dense = task['wants_dense']
 
