@@ -2,7 +2,7 @@
 from math import isnan
 
 import numpy as np
-import scipy
+from scipy import linalg as spla
 
 from mosfit.constants import LIKELIHOOD_FLOOR
 from mosfit.modules.module import Module
@@ -36,42 +36,25 @@ class Likelihood(Module):
         # Model predictions and upper-limit flags
         self._model_observations = np.asarray(kwargs['model_observations'])
         self._score_modifier = kwargs.get(self.key('score_modifier'), 0.0)
-        self._upper_limits = np.array(
-            kwargs.get('upperlimits', []),
-            dtype=bool
-        )
+        self._upper_limits = np.asarray(kwargs.get('upperlimits', []), dtype=bool)
 
         # NEW: per-point validity mask from upstream (Sampson→Photometry)
-        valid_mask = kwargs.get('valid_mask', None)
-            
+        valid_mask = kwargs.get('valid_mask')
 
 
         if valid_mask is not None:
             #print("DEBUG Likelihood: N_used =", np.count_nonzero(valid_mask))
             valid_mask = np.asarray(valid_mask, dtype=bool)
-            if valid_mask.shape == self._model_observations.shape:
-                # Strict: if no valid points, give a very bad finite score.
-                if not np.any(valid_mask):
-                    return ret
-                # Apply mask to model_obs and upper_limits
-                self._model_observations = self._model_observations[valid_mask]
-                if self._upper_limits.size:
-                    self._upper_limits = self._upper_limits[valid_mask]
-            else:
+            if valid_mask.shape != self._model_observations.shape:
                 # shape mismatch: ignore mask
                 valid_mask = None
-
-        value = ret['value']
+            # Strict: if no valid points, give a very bad finite score.
+            elif not np.any(valid_mask):
+                return ret
 
         # Basic sanity on fractions
         if min(self._fractions) < 0.0 or max(self._fractions) > 1.0:
             return ret
-
-        # Check for NaNs in model where we have non-upper-limit points
-        for oi, obs in enumerate(self._model_observations):
-            if (not self._upper_limits.size or not self._upper_limits[oi]) \
-               and (isnan(obs) or not np.isfinite(obs)):
-                return ret
 
         # Covariance diagonal and residuals (1D arrays aligned with data)
         diag = kwargs.get('kdiagonal', None)
@@ -84,28 +67,33 @@ class Likelihood(Module):
         residuals = np.asarray(residuals)
 
         # Apply mask to diag and residuals as well
-        if valid_mask is not None and valid_mask.shape == diag.shape:
+        if valid_mask is not None:
+            # Apply mask to model_obs and upper_limits
+            self._model_observations = self._model_observations[valid_mask]
             diag = diag[valid_mask]
             residuals = residuals[valid_mask]
-            if not np.any(diag.shape) or not np.any(residuals.shape):
-                return ret  # no usable points
+            if self._upper_limits.size:
+                self._upper_limits = self._upper_limits[valid_mask]
+
+        if self._upper_limits.size:
+            finite_mask = self._upper_limits | np.isfinite(self._model_observations)
+        else:
+            finite_mask = np.isfinite(self._model_observations)
+        if not np.all(finite_mask):
+            return ret
+
+        value = ret["value"]
 
         # Full covariance matrix case
-        if kwargs.get('kmat', None) is not None:
+        if kwargs.get('kmat') is not None:
             kmat = np.asarray(kwargs['kmat'])
 
             # Apply mask to the covariance matrix: select rows/cols
-            if valid_mask is not None and kmat.shape[0] == valid_mask.shape[0]:
-                if not np.any(valid_mask):
-                    return ret
+            if valid_mask is not None:
                 kmat = kmat[np.ix_(valid_mask, valid_mask)]
 
             # Add observed errors to diagonal
             kmat[np.diag_indices_from(kmat)] += diag
-
-            condn = np.linalg.cond(kmat)
-            if condn > 1.0e10:
-                return ret
 
             if self._use_cpu is not True and self._model._fitter._cuda:
                 try:
@@ -122,10 +110,7 @@ class Likelihood(Module):
                 else:
                     self._use_cpu = False
                     if not self._cuda_reported:
-                        self._printer.message(
-                            'cuda_enabled',
-                            master_only=True
-                        )
+                        self._printer.message('cuda_enabled', master_only=True)
                         self._cuda_reported = True
 
                     kmat_gpu = gpuarray.to_gpu(kmat)
@@ -135,42 +120,20 @@ class Likelihood(Module):
                         len(residuals), 1))
                     cho_mat_gpu = res_gpu.copy()
                     skla.cho_solve(kmat_gpu, cho_mat_gpu, lib='cusolver')
-                    value -= (0.5 * (
+                    value -= 0.5 * (
                         skla.mdot(skla.transpose(res_gpu),
-                                  cho_mat_gpu)).get())[0][0]
+                                  cho_mat_gpu).get())[0][0]
 
             if self._use_cpu:
                 try:
-                    import scipy
-                    chol_kmat = scipy.linalg.cholesky(
-                        kmat,
-                        check_finite=False
+                    chol_kmat = spla.cholesky(kmat, lower=False, check_finite=False)
+                    value = -np.sum(np.log(np.diag(chol_kmat)))
+                    solved = spla.cho_solve(
+                        (chol_kmat, False), residuals, check_finite=False
                     )
-
-                    value = -np.linalg.slogdet(chol_kmat)[-1]
-                    value -= 0.5 * (
-                        np.matmul(
-                            residuals.T,
-                            scipy.linalg.cho_solve(
-                                (chol_kmat, False),
-                                residuals,
-                                check_finite=False
-                            )
-                        )
-                    )
-                except Exception:
-                    try:
-                        import scipy
-                        value = -0.5 * (
-                            np.matmul(
-                                np.matmul(
-                                    residuals.T, scipy.linalg.inv(kmat)
-                                ),
-                                residuals
-                            ) + np.log(scipy.linalg.det(kmat))
-                        )
-                    except scipy.linalg.LinAlgError:
-                        return ret
+                    value -= 0.5 * np.dot(residuals, solved)
+                except spla.LinAlgError:
+                    return ret
 
             ret['kdiagonal'] = diag
             ret['kresiduals'] = residuals
@@ -183,13 +146,13 @@ class Likelihood(Module):
             self._o_band_vs = np.asarray(kwargs['obandvs'])
 
             # Apply mask to variances as well
-            if valid_mask is not None and valid_mask.shape == self._o_band_vs.shape:
+            if valid_mask is not None:
                 self._o_band_vs = self._o_band_vs[valid_mask]
 
             # diag and residuals already masked above
+            variance_terms = self._o_band_vs**2 + diag
             value = -0.5 * np.sum(
-                residuals ** 2 / (self._o_band_vs ** 2 + diag) +
-                np.log(self._o_band_vs ** 2 + diag)
+                residuals**2 / variance_terms + np.log(variance_terms)
             )
 
         score = self._score_modifier + value
