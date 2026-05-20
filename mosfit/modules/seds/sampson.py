@@ -1,7 +1,7 @@
 """
 sampson.py
 
-MOSFiT SED module wrapping Karthik's stripped-envelope SN emulator ("sampson").
+MOSFiT SED module wrapping the stripped-envelope SN emulator ("sampson").
 
 Weights ship under ``mosfit/emulators/sampson/`` (or ``$MOSFIT_EMULATOR_DATA/sampson``).
 
@@ -80,7 +80,7 @@ class SimpleFluxMLP(nn.Module):
 _EMULATOR_NAME = "sampson"
 _WEIGHTS_DIR = emulator_weights_dir(_EMULATOR_NAME)
 NORMALIZATION_STATS_PATH = str(
-    _WEIGHTS_DIR / "normalization_stats_tmin4_tmax60_N15.pt"
+    _WEIGHTS_DIR / "normalization_stats_tmin5_tmax60_N15.pt"
 )
 EMULATOR_WEIGHTS_PATH = str(_WEIGHTS_DIR / "emulator.pth")
 
@@ -100,7 +100,7 @@ class Sampson(SED):
     )
     X_CONST = (c.h * c.c / c.k_B).cgs.value
     STEF_CONST = (4.0 * pi * c.sigma_sb).cgs.value
-    EMULATOR_T_MIN = 4.0
+    EMULATOR_T_MIN = 5.0
     EMULATOR_T_MAX = 55.0   # ← was 60.0, buffer against edge effects
 
     # ``10**log`` / interp can yield 0, tiny negative floats, or underflow — keep linear
@@ -178,8 +178,8 @@ class Sampson(SED):
             # Build emulator and load weights (SimpleFluxMLP, not Transformer)
             # ------------------------------------------------------------------
             Sampson.model = SimpleFluxMLP(
-                d_model=512,
-                num_layers=10,
+                d_model=2000,
+                num_layers=5,
                 n_wavelength=n_wav,
             ).to(Sampson.device)
 
@@ -397,7 +397,7 @@ class Sampson(SED):
         tor = {
             "sample_wavelengths": self._sample_wavelengths,
             self.key("seds"): seds,
-            # per-point validity mask: True where 4 <= t_rest <= 60
+            # per-point validity mask: True where EMULATOR_T_MIN <= t_rest <= EMULATOR_T_MAX
             "sesn_valid_mask": valid_mask,
             # original observer-frame times for downstream modules
             "times_out": obs_times,
