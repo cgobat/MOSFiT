@@ -3,7 +3,6 @@ set -ev
 if [ "$1" = -c ]; then
     RUNNER="coverage run -p --source=mosfit"
     TRUNNER="coverage run -p"
-    echo "travis_fold:start:FIT Fitting test data"
 else
     RUNNER=python
     TRUNNER=python
@@ -27,18 +26,10 @@ echo -ne '\n\n1\n1\n1\n\n\n9\n9\n\nu\n9\n\n\n\n\n\n1992ApJ...400L...1W\ny\ny\nn\
 $RUNNER -m mosfit -e 09do --test -i 1 --no-fracking -m slsn -S 20 -E 10.0 100.0 -g -c --no-copy-at-launch -x radiusphot -F covariance lumdist 500 -w products/walkers.json
 $RUNNER -m mosfit -e mosfit/tests/SN2006le.json --test -i 5 --no-fracking -m csmni --extra-bands u g --extra-instruments LSST -L 55540 55560 --exclude-bands B -s test --quiet -u --offline -F covariance redshift 0.1
 
-if [ "$1" = -c ]; then
-    echo "travis_fold:end:FIT Fitting test data done"
-    echo "travis_fold:start:GEN Generating random models"
-fi
-
 $RUNNER -m mosfit --test -i 0
 $RUNNER -m mosfit -i 0 -m default -P parameters_test.json -l 23 0.5 -F covariance
 $TRUNNER test.py
 
 if [ "$1" = -c ]; then
-    echo "travis_fold:end:GEN Generating random models done"
-    echo "travis_fold:start:JUP Testing Jupyter notebooks"
-    echo "travis_fold:end:JUP Testing Jupyter notebooks"
     coverage combine
 fi
