@@ -43,10 +43,10 @@ If the ASCII file matches required columns closely, conversion may proceed quiet
 Sampling Options
 ----------------
 
-``MOSFiT`` at present offers three ways to sample the parameter space: An ensemble-based MCMC (implemented with the ``emcee`` package), and two nested sampling approach (implemented with the ``ultranest`` and ``dynesty`` packages). 
+``MOSFiT`` at present offers three ways to sample the parameter space: an ensemble-based MCMC (implemented with the ``emcee`` package), and two nested sampling approaches (implemented with the ``ultranest`` and ``dynesty`` packages).
 The ensemble-based approach is presently the default sampler used in ``MOSFiT``, although nested sampling (which in preliminary testing performs better) is likely to replace it as the default in a future version.
 
-Samplers are selected via the ``-D`` option: ``-D ensembler`` for the ensemble-based approach, and ``-D nester`` for nested sampling with ``dynesty`` and ``-D ultranest`` for ultranest. The approaches are described below.
+Samplers are selected via the ``-D`` option: ``-D ensembler`` for the ensemble-based approach, ``-D dynesty`` for nested sampling with ``dynesty``, and ``-D ultranest`` for ultranest. The approaches are described below.
 
 .. _ensembler:
 
@@ -64,7 +64,7 @@ The ensemble-based MCMC can be selected via the ``-D`` flag: ``-D ensembler``.
 Initialization
 --------------
 
-When initializing, walkers are drawn randomly from the prior distributions of all free parameters, unless the ``-w`` option was passed to initialize from a previous run (see previous_). By default, any drawn walker that has a defined, non-infinite score will be retained, unless the ``-d`` option is used, which by default only draws walkers above the average walker score drawn so far, or the numeric value specified by the user (warning: this option can often make the initial drawing phase last a *long* time).
+When initializing, walkers are drawn randomly from the prior distributions of all free parameters, unless the ``-w`` option was passed to initialize from a previous run (see :ref:`previous`). By default, any drawn walker that has a defined, non-infinite score will be retained, unless the ``-d`` option is used, which by default only draws walkers above the average walker score drawn so far, or the numeric value specified by the user (warning: this option can often make the initial drawing phase last a *long* time).
 
 .. _restricting:
 
@@ -114,7 +114,7 @@ The duration of the ``MOSFiT`` run is set with the ``-i`` option, unless the ``-
 Burning in a model
 ------------------
 
-Unless the solution for a given dataset is known in advance, the initial period of searching for the true posterior distribution involves finding the locations of the solutions of highest likelihood. In ``MOSFiT``, various ``scipy`` routines are employed in an alernating fashion with a Gibbs-like affine-invariant ensemble evolution, which we have found more robustly locates the true global likelihood minimas. The period of alternation between optimization (called "fracking" in ``MOSFiT``) and sampling (called "walking" in ``MOSFiT``) is controlled by the ``-f`` option, with the total burn-in duration being controlled by the ``-b``/``-p`` options. If ``-b``/``-p`` are not set, the burn-in is set to run for half the total number of iterations specified by ``-i``.
+Unless the solution for a given dataset is known in advance, the initial period of searching for the true posterior distribution involves finding the locations of the solutions of highest likelihood. In ``MOSFiT``, various ``scipy`` routines are employed in an alternating fashion with a Gibbs-like affine-invariant ensemble evolution, which we have found more robustly locates the true global likelihood minimas. The period of alternation between optimization (called "fracking" in ``MOSFiT``) and sampling (called "walking" in ``MOSFiT``) is controlled by the ``-f`` option, with the total burn-in duration being controlled by the ``-b``/``-p`` options. If ``-b``/``-p`` are not set, the burn-in is set to run for half the total number of iterations specified by ``-i``.
 
 As an example, the following will run the burn-in phase for 2000 iterations, the post burn-in for 3000 iterations more (for a total of 5000), fracking every 100th iteration:
 
@@ -125,18 +125,19 @@ As an example, the following will run the burn-in phase for 2000 iterations, the
 All :ref:`convergence <convergence>` metrics are computed *after* the burn-in phase, as the operations employed during burn-in do *not* preserve detailed balance. During burn-in, the solutions of highest likelihood are over-represented, and thus the posteriors should not be trusted until the :ref:`convergence <convergence>` criteria are met beyond the burn-in phase.
 
 .. _nester:
+.. _dynesty:
 
 Nested sampling with ultranest
 ==============================
 
 For complicated posteriors with multiple modes or for problems of high dimension (ten dimensions or greater), nested sampling is often a superior choice versus ensemble-based methods.
- In ``MOSFiT``, nested sampling with the ``ultranest`` package. More information about ``ultranest`` can be found at https://johannesbuchner.github.io/UltraNest/.
+In ``MOSFiT``, nested sampling is available via the ``ultranest`` package. More information about ``ultranest`` can be found at https://johannesbuchner.github.io/UltraNest/.
 
 The nested sampler can be selected via the ``-D`` flag: ``-D ultranest``.
 
-Ultranest supports resuming from a previous run, if you set the output path (`-o myoutputdirectory`).
+Ultranest supports resuming from a previous run if you set the output path (``-o myoutputdirectory``).
 
-If you have `mpi4py` installed, Ultranest supports running with MPI (`mpiexec -np 8 mosfit`).
+If you have ``mpi4py`` installed, Ultranest supports running with MPI (``mpiexec -np 8 mosfit``).
 
 Ultranest implements a modern variant of nested sampling known as *reactive* nested sampling,
 a derivative of *dynamic* nested sampling. This can enhance the posterior samples at low cost.
@@ -144,23 +145,22 @@ a derivative of *dynamic* nested sampling. This can enhance the posterior sample
 Nested sampling with dynesty
 =============================
 
-
 In ``MOSFiT``, nested sampling via the ``dynesty`` package is also available, which uses a modern variant of nested sampling known as *dynamic* nested sampling (`see the full documentation for this package <http://dynesty.rtfd.io>`_).
 
 Whereas ensemble-based approaches can only estimate the information content of their posteriors via heuristic information metrics such as the WAIC (see :ref:`scoring`), nested sampling directly evaluates the evidence for a given model, and provides a (statistical) estimate of its error. Nested sampling also yields many more useful samples of the posterior for the purposes of visualizing its structure; it is not uncommon for a run to provide tens of thousands of informative samples, as compared to ensemble-based approach that may only yield a few hundred.
 
-However, nested sampling is a much more complicated algorithm than ensemble-based MCMC and thus is potentially prone to failures that can be difficult to track down. Additionally, the ``dynesty`` software currently does not offer the ability to restart if the sampling is prematurely terminated; thus, it is advisable to always use the nested sampling routine in conjunction with the ``-R`` flag, which when used with the ``nester`` option specifies the termination criterion based upon the expected remaining evidence gain.
+However, nested sampling is a much more complicated algorithm than ensemble-based MCMC and thus is potentially prone to failures that can be difficult to track down. Additionally, the ``dynesty`` software currently does not offer the ability to restart if the sampling is prematurely terminated; thus, it is advisable to always use the nested sampling routine in conjunction with the ``-R`` flag, which when used with ``-D dynesty`` specifies the termination criterion based upon the expected remaining evidence gain.
 
-The nested sampler can be selected via the ``-D`` flag: ``-D nester``.
+The nested sampler can be selected via the ``-D`` flag: ``-D dynesty``.
 
 .. _baselining-batching:
 
 Baselining and batching
 -----------------------
 
-When performing a nested sampling run, the user might notice that there are two phases to the process: "baselining" and "batching". In the baselining phase, ``nester`` samples from the posterior repeatedly to obtain the log of the evidence :math:`\log_{10} Z` (the N-dimensional volume integral of the postioer), for which it estimates the error :math:`\Delta \log_{10} Z`. Once :math:`\Delta \log_{10} Z` is smaller than some prescribed value (set with the ``-R`` parameter), baselining ceases and batching begins.
+When performing a nested sampling run, the user might notice that there are two phases to the process: "baselining" and "batching". In the baselining phase, ``dynesty`` samples from the posterior repeatedly to obtain the log of the evidence :math:`\log_{10} Z` (the N-dimensional volume integral of the posterior), for which it estimates the error :math:`\Delta \log_{10} Z`. Once :math:`\Delta \log_{10} Z` is smaller than some prescribed value (set with the ``-R`` parameter), baselining ceases and batching begins.
 
-In batching, ``nester`` fleshes out the posterior such that even regions of lower probability that may not be dominating the evidence integral are resolved with high fidelity. In this part of the process, the posterior is sampled from again, but this time minimizing the error in the posterior distribution as opposed to its integral. This process continues until a stopping criterion is met, which indicates that the posterior is now of high quality. Typically, the batching phase takes a few times longer than the baselining phase.
+In batching, ``dynesty`` fleshes out the posterior such that even regions of lower probability that may not be dominating the evidence integral are resolved with high fidelity. In this part of the process, the posterior is sampled from again, but this time minimizing the error in the posterior distribution as opposed to its integral. This process continues until a stopping criterion is met, which indicates that the posterior is now of high quality. Typically, the batching phase takes a few times longer than the baselining phase.
 
 .. _switching:
 
@@ -171,11 +171,11 @@ After completing a nested sampling run, it is often useful to draw parameter com
 
 .. code-block:: bash
 
-    mosfit -e ./LSQ12dlf.json -m slsn -w name-of-output.json -G -N 100
+    mosfit -e ./LSQ12dlf.json -m slsn -w products/walkers.h5 -G -N 100
 
-where above we specify that we would like 100 parameter combinations from the ``nester`` output. The weights determined with ``nester`` will be used to proportionately draw walkers for ``ensembler``, yielding a sample that properly maps to the posterior determined by the nested sampling. As the above does not perform any additional sampling, the user does not need to specify an event to compare against, and can simply omit the ``-e`` flag and its argument(s).
+where above we specify that we would like 100 parameter combinations from the ``dynesty`` output. The weights determined with ``dynesty`` will be used to proportionately draw walkers for ``ensembler``, yielding a sample that properly maps to the posterior determined by the nested sampling. As the above does not perform any additional sampling, the user does not need to specify an event to compare against, and can simply omit the ``-e`` flag and its argument(s).
 
-Because ``nester`` currently does not support restarts, the opposite situation of using ``ensembler`` outputs to initialize ``nester`` is not possible.
+Because ``dynesty`` currently does not support restarts, the opposite situation of using ``ensembler`` outputs to initialize ``dynesty`` is not possible.
 
 .. _io:
 
@@ -256,7 +256,7 @@ Other prior
 =======================
 
 
-If you have another prior following a function not specified above, you can create your own prior by using the ``arbitrary" class prior. To start with, you need to create a file (e.g., ``filename.csv" which storing the information of your function:
+If you have another prior following a function not specified above, you can create your own prior by using the ``arbitrary`` class prior. To start with, you need to create a file (e.g., ``filename.csv``) which storing the information of your function:
 
 .. code-block:: txt
 

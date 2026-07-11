@@ -25,7 +25,7 @@ Is MOSFiT using the correct data?
 
 ``MOSFiT`` reads **only** the files you pass with ``-e`` (catalog-format JSON on disk or ASCII consumed by the converter). It does **not** download event payloads from catalog websites. Correctness is therefore entirely governed by **your** inputs—validate photometric systems, source tags, units, and time standards before trusting fits.
 
-Keep a reproducible snapshot: immutable input JSON path or checksum, exact command line, and the ``products/*.json`` (and optional chain files) emitted by that run.
+Keep a reproducible snapshot: immutable input JSON path or checksum, exact command line, and the ``products/walkers.h5`` (and optional ``chain.h5`` / extras) emitted by that run.
 
 Can I fit private data with MOSFiT?
 ===================================

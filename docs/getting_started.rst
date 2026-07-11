@@ -30,7 +30,7 @@ Multiple JSON files can be fit in succession (paths with spaces in quotes):
 
     mosfit -e ./LSQ12dlf.json ./SN2015bn.json
 
-The code outputs JSON files for each event/model combination that each contain a set of walkers that have been relaxed into an equilibrium about the posterior parameter distributions. This output is visualized via an example Jupyter notebook (``mosfit.ipynb``), which is copied to the ``products`` folder in the run directory, and by default shows output from the last ``MOSFiT`` run.
+The code writes ``products/walkers.h5`` for each event/model combination: a set of walkers relaxed about the posterior, merged with the input event catalog. An example Jupyter notebook (``mosfit.ipynb``) is copied into the ``jupyter/`` folder in the run directory and, by default, visualizes the last ``MOSFiT`` run.
 
 .. _parallel:
 
@@ -38,7 +38,7 @@ The code outputs JSON files for each event/model combination that each contain a
 Parallel execution
 ------------------
 
-``MOSFiT`` is parallelized and can be run in parallel by prepending ``mpirun -np #``, where ``#`` is the number of processors in your machine +1 for the master process. So, if you computer has 4 processors, the above command would be:
+``MOSFiT`` is parallelized and can be run in parallel by prepending ``mpirun -np #``, where ``#`` is the number of processors in your machine +1 for the master process. So, if your computer has 4 processors, the above command would be:
 
 .. code-block:: bash
 
@@ -62,7 +62,7 @@ Using your own data
 
     mosfit -e my_ascii_data_file.csv
 
-``MOSFiT`` will convert the files to JSON format and immediately begin processing the new files (append ``-G`` to immediately exit after conversion). For more information, please see the :ref:`Private data` section.
+``MOSFiT`` will convert the files to JSON format and immediately begin processing the new files (append ``-G`` to immediately exit after conversion). For more information, please see :ref:`ASCII / catalog JSON <private>`.
 
 .. _producing-outputs:
 
@@ -80,23 +80,24 @@ Additional outputs can be produced via some optional options that can be passed 
 Visualizing outputs
 -------------------
 
-The outputs from ``MOSFiT`` can be visualized using the Jupyter notebook ``mosfit.ipynb`` copied by the code into a ``jupyter`` directory within the current run directory. This notebook is intended to be a simple demonstration of how to visualize the output data, and can be modified by the users to their own needs.
+The outputs from ``MOSFiT`` can be visualized using the Jupyter notebook ``mosfit.ipynb`` copied by the code into a ``jupyter`` directory within the current run directory. This notebook is intended to be a simple demonstration of how to visualize the output data, and can be modified by users for their own needs.
 
-First, the user should make sure that Jupyter is installed, then execute the Jupyter notebook from the run directory:
+First, make sure Jupyter (and the optional ``corner`` package) are installed, then open the notebook from the run directory:
 
 .. code-block:: bash
 
     jupyter notebook jupyter/mosfit.ipynb
 
-In this notebook, there are four cells which should require minimal editing to visualize your results; the cells should be evaluated in order. The first cell imports modules and loads the data output from the last run (stored in ``walkers.h5``). The second cell displays the ensemble of light curve fits and the data the model was fitted to:
+Evaluate the cells in order. The notebook:
+
+1. Loads ``walkers.h5`` from ``products/`` (or a path set via the ``MOSFIT_WALKERS`` environment variable).
+2. Plots the photometric light-curve ensemble against the fitted data (saved as ``products/lc.pdf``):
 
 .. image:: images/light-curve.png
 
-The third cell shows X-ray observations, if the transient had any.
-
-The fourth cell shows the evolution of free parameters as a function of time (the Monte Carlo chain).
-
-The last cell produces a corner plot using the `corner package <https://corner.readthedocs.io>`_.
+3. Plots bolometric luminosity / absolute magnitude if luminosity rows are present in the walkers file.
+4. Plots free-parameter traces from ``products/chain.h5`` when the fit was run with ``-c``.
+5. Produces a corner plot with the `corner package <https://corner.readthedocs.io>`_ (saved as ``products/corner.pdf``).
 
 .. _sharing:
 
@@ -104,9 +105,9 @@ The last cell produces a corner plot using the `corner package <https://corner.r
 Outputs and provenance
 -------------------------------------------
 
-Runs write products under ``products/`` (JSON with walkers and model metadata, optionally chains and extras). This fork does **not** upload fits or observations anywhere: distribution, archiving, and DOIs are your responsibility (e.g. Zenodo, your collaboration’s pipeline, version-controlled paths + hashes).
+Runs write products under ``products/``—chiefly ``walkers.h5`` (walkers + model metadata), and optionally ``chain.h5`` (with ``-c``) and ``extras.json`` (with ``-x``). This fork does **not** upload fits or observations anywhere: distribution, archiving, and DOIs are your responsibility (e.g. Zenodo, your collaboration’s pipeline, version-controlled paths + hashes).
 
-Treat ``products/*.json`` as the canonical deliverable for reproducibility alongside the exact input catalog JSON (or ASCII) and pinned ``MOSFiT`` commit or release.
+Treat ``products/walkers.h5`` as the canonical deliverable for reproducibility alongside the exact input catalog JSON (or ASCII) and a pinned ``MOSFiT`` commit or release. Legacy ``walkers.json`` files are still readable.
 
 .. _troubleshooting:
 
