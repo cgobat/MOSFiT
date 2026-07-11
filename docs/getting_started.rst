@@ -70,7 +70,7 @@ Using your own data
 Producing outputs
 -----------------
 
-All outputs (except for converted observational data) are stored in the ``products`` directory, which is created by ``MOSFiT`` automatically in the current run directory. By default (without ``--quick-save``), the main fit results are stored in fixed filenames under ``products``—chiefly ``walkers.json``—which merges the information from the original event JSON with the walkers produced by sampling. Passing ``--quick-save`` instead writes similarly named output files prefixed by the transient name (see :ref:`io`).
+All outputs (except for converted observational data) are stored in the ``products`` directory, which is created by ``MOSFiT`` automatically in the current run directory. By default (without ``--quick-save``), the main fit results are stored in fixed filenames under ``products``—chiefly ``walkers.h5``—which merges the information from the original event JSON with the walkers produced by sampling. Passing ``--quick-save`` instead writes similarly named output files prefixed by the transient name (see :ref:`io`).
 
 Additional outputs can be produced via some optional options that can be passed to ``MOSFiT``. Please see the :ref:`arbitrary outputs <arbitrary>` section.
 
@@ -88,7 +88,7 @@ First, the user should make sure that Jupyter is installed, then execute the Jup
 
     jupyter notebook jupyter/mosfit.ipynb
 
-In this notebook, there are four cells which should require minimal editing to visualize your results; the cells should be evaluated in order. The first cell imports modules and loads the data output from the last run (store in ``walkers.json``). The second cell displays the ensemble of light curve fits and the data the model was fitted to:
+In this notebook, there are four cells which should require minimal editing to visualize your results; the cells should be evaluated in order. The first cell imports modules and loads the data output from the last run (stored in ``walkers.h5``). The second cell displays the ensemble of light curve fits and the data the model was fitted to:
 
 .. image:: images/light-curve.png
 

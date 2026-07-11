@@ -45,7 +45,7 @@ The user may wish to generate light curves for a transient in instruments/bands 
 Mock light curves in a magnitude-limited survey
 -----------------------------------------------
 
-Generating a light curve from a model in ``MOSFiT`` is achieved by simply not passing any event to the code with the ``-e`` option. The command below will dump out a default number of parameter draws to a ``walkers.json`` file in the ``products`` folder:
+Generating a light curve from a model in ``MOSFiT`` is achieved by simply not passing any event to the code with the ``-e`` option. The command below will dump out a default number of parameter draws to a ``walkers.h5`` file in the ``products`` folder:
 
 .. code-block:: bash
 
@@ -65,11 +65,18 @@ If the user wishes to produce mock observations for a given instrument, they sho
 Saving the chain
 ----------------
 
-Because the chain can be quite large (a full chain for a model with 15 free parameters, 100 walkers, and 20000 iterations will occupy ~120 MB of disk space), by default ``MOSFiT`` does not output the full chain to disk. Doing so is achieved by passing ``MOSFiT`` the ``-c`` option:
+Because the chain can be quite large, by default ``MOSFiT`` does not output the full chain to disk. Doing so is achieved by passing ``MOSFiT`` the ``-c`` option:
 
 .. code-block:: bash
 
     mosfit -m slsn -e ./LSQ12dlf.json -c
+
+The chain is written as compressed HDF5 (``products/chain.h5``), with datasets ``samples`` (shape ``ntemps × nwalkers × nsteps × nparams``) and ``param_names``. Load it in Python with::
+
+    import h5py
+    with h5py.File('products/chain.h5', 'r') as hf:
+        samples = hf['samples'][:]
+        param_names = [n.decode() for n in hf['param_names'][:]]
 
 Note that the outputted chain includes both the burn-in and post-burn-in phases of the fitting procedure. The position of each walker in the chain as a function of time can be visualized using the included ``mosfit.ipynb`` Jupyter notebook.
 

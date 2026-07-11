@@ -338,6 +338,11 @@ class Transient(Module):
                                 'e_upper_magnitude',
                                 'e_lower_magnitude')):
                             continue
+                        # Likewise, do not append empty ``mbol`` / ``e_*mbol``
+                        # placeholders when the row uses band magnitudes.
+                        if (key == 'photometry' and not mbol_here and
+                                x in _PHOTOMETRY_MBOL_KEYS):
+                            continue
                         if x in num_subkeys:
                             val = None if val is None else np.mean([
                                 float(x) for x in listify(val)])

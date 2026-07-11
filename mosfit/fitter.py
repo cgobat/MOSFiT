@@ -1,8 +1,6 @@
 # -*- coding: UTF-8 -*-
 """Definitions for `Fitter` class."""
-import codecs
 import gc
-import json
 import os
 import time
 import warnings
@@ -28,7 +26,9 @@ from mosfit.samplers.nester import Nester
 from mosfit.samplers.ultranester import UltraNester
 from mosfit.utils import (all_to_list, entabbed_json_dump, entabbed_json_dumps,
                           flux_density_unit, frequency_unit, listify,
-                          open_atomic, speak, write_json_payload)
+                          load_walkers_file, open_atomic, speak,
+                          write_chain_hdf5, write_json_payload,
+                          write_walkers_hdf5)
 
 from .model import Model
 
@@ -224,10 +224,7 @@ class Fitter(object):
                 for walker_path in walker_paths:
                     if os.path.exists(walker_path):
                         prt.prt('  {}'.format(walker_path))
-                        with codecs.open(
-                                walker_path, 'r', encoding='utf-8') as f:
-                            all_walker_data = json.load(
-                                f, object_pairs_hook=OrderedDict)
+                        all_walker_data = load_walkers_file(walker_path)
 
                         # Support both the format where all data stored in a
                         # single-item dictionary (the OAC format) and the older
@@ -744,22 +741,19 @@ class Fitter(object):
         if write:
             prt.message('writing_complete')
             if not quick_save:
-                walkers_payload = entabbed_json_dumps(
-                    oentry, separators=(',', ':'))
-                with open_atomic(
-                        os.path.join(model.get_products_path(), 'walkers.json'),
-                        'w') as fwalk:
-                    write_json_payload(fwalk, walkers_payload)
+                walkers_path = os.path.join(
+                    model.get_products_path(), 'walkers.h5')
             else:
-                with open_atomic(
-                    os.path.join(model.get_products_path(), self._event_name + '_walkers' +
-                                    (('_' + suffix) if suffix else '') + '.json'),
-                            'w') as feven:
-                    entabbed_json_dump(oentry, feven, separators=(',', ':'))
+                walkers_path = os.path.join(
+                    model.get_products_path(),
+                    self._event_name + '_walkers' +
+                    (('_' + suffix) if suffix else '') + '.h5')
+            write_walkers_hdf5(walkers_path, oentry)
 
             if save_full_chain:
                 prt.message('writing_full_chain')
-                my_chain = np.asarray(self._sampler._all_chain.tolist())
+                my_chain = np.array(
+                    self._sampler._all_chain, copy=True, order='C')
                 pi = 0
                 param_names = []
                 for ti, task in enumerate(model._call_stack):
@@ -772,21 +766,15 @@ class Fitter(object):
                         my_chain[:, :, :, pi] = value
                         param_names.append(task)
                         pi = pi + 1
-                my_chain = my_chain.tolist()
-                my_chain.append(param_names)
-                chain_payload = entabbed_json_dumps(
-                    my_chain, separators=(',', ':'))
                 if not quick_save:
-                    with open_atomic(
-                            os.path.join(model.get_products_path(), 'chain.json'),
-                            'w') as fchain:
-                        write_json_payload(fchain, chain_payload)
+                    chain_path = os.path.join(
+                        model.get_products_path(), 'chain.h5')
                 else:
-                    with open_atomic(os.path.join(model.get_products_path(),
-                                    self._event_name + '_chain' +
-                                    (('_' + suffix) if suffix else '') + '.json'),
-                                'w') as feven:
-                        write_json_payload(feven, chain_payload)
+                    chain_path = os.path.join(
+                        model.get_products_path(),
+                        self._event_name + '_chain' +
+                        (('_' + suffix) if suffix else '') + '.h5')
+                write_chain_hdf5(chain_path, my_chain, param_names)
 
             if extra_outputs is not None:
                 prt.message('writing_extras')

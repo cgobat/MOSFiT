@@ -187,7 +187,7 @@ The paths of the various inputs and outputs are set by a few different options i
 
 By default, ``MOSFiT`` searches the local ``models`` folder copied to the run directory to find model JSON and their corresponding parameter JSON files to use for runs. If the user wishes to use custom parameter files for their runs instead, they can specify the paths to these files using the ``-P`` option.
 
-``MOSFiT`` outputs are always written to a local ``products`` directory. Without ``--quick-save``, canonical names are ``walkers.json``, ``extras.json`` (when ``-x`` is used), and ``chain.json`` (when ``-c`` is used)—no duplicate per-event filenames. With ``--quick-save``, filenames are prefixed with the transient being fit so multiple runs stay distinct (e.g. ``LSQ12dlf_walkers.json``).
+``MOSFiT`` outputs are always written to a local ``products`` directory. Without ``--quick-save``, canonical names are ``walkers.h5``, ``extras.json`` (when ``-x`` is used), and ``chain.h5`` (when ``-c`` is used)—no duplicate per-event filenames. With ``--quick-save``, filenames are prefixed with the transient being fit so multiple runs stay distinct (e.g. ``LSQ12dlf_walkers.h5``).
 
 The ``-s`` option appends a suffix to ``--quick-save`` output filenames, e.g.:
 
@@ -195,9 +195,11 @@ The ``-s`` option appends a suffix to ``--quick-save`` output filenames, e.g.:
 
     mosfit -e ./LSQ12dlf.json -m slsn --quick-save -s mysuffix
 
-includes ``mysuffix`` in those names (e.g. ``LSQ12dlf_walkers_mysuffix.json``).
+includes ``mysuffix`` in those names (e.g. ``LSQ12dlf_walkers_mysuffix.h5``).
 
-The MCMC chain, when requested with ``-c``, is written once as ``chain.json`` unless ``--quick-save`` is set, where it is ``<event>_chain[_suffix].json`` instead.
+``walkers.h5`` stores the same merged event+model catalog payload historically written as ``walkers.json`` (gzip-compressed JSON bytes under ``entry_json``). Pass it to ``-w`` to seed a later run; legacy ``.json`` walker files are still accepted.
+
+The MCMC chain, when requested with ``-c``, is written once as HDF5 (``chain.h5``) unless ``--quick-save`` is set, where it is ``<event>_chain[_suffix].h5`` instead. The file contains a ``samples`` dataset with axes ``(temperature, walker, step, parameter)`` and a ``param_names`` dataset listing the free parameters.
 
 .. _fixing:
 
@@ -291,7 +293,7 @@ The user can use the ensemble parameters from a prior ``MOSFiT`` run to draw the
 
 .. code-block:: bash
 
-    mosfit -e ./LSQ12dlf.json -m slsn -w LSQ12dlf-suffix.json
+    mosfit -e ./LSQ12dlf.json -m slsn -w products/walkers.h5
 
 If the file contains more walkers than requested by the new run, walker positions will be drawn verbatim from the input file, otherwise walker positions will be "jittered" by a small amount so no two walkers share identical parameters.
 
