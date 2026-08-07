@@ -1,0 +1,137 @@
+{
+    "ebv":{
+        "kind":"parameter",
+        "value":0.0,
+        "class":"parameter",
+        "inputs":[
+            "transient"
+        ],
+        "latex":"E({\\rm B} - {\\rm V})"
+    },
+    "nhhost":{
+        "kind":"parameter",
+        "value":1.0e18,
+        "class":"parameter",
+        "latex":"n_{\\rm H,host}",
+        "derived_keys":"avhost"
+    },
+    "rvhost": {
+        "kind": "parameter",
+        "value": 3.1,
+        "class": "parameter",
+        "latex": "R_{V,\\rm host}"
+    },
+    "texplosion":{
+        "kind":"parameter",
+        "value":0.0,
+        "class":"parameter",
+        "latex":"t_{\\rm exp}\\,{\\rm (days)}"
+    },
+    "eta_vel":{
+        "kind":"parameter",
+        "value":0.0,
+        "class":"parameter",
+        "latex":"\\eta_{\\rm vel}"
+    },
+    "min_vel":{
+        "kind":"parameter",
+        "value":1.5,
+        "class":"parameter",
+        "latex":"\\rm vel_{\\rm min},({\\rm 100 km\\,s}^{-1})"
+    },
+    "del_vel":{
+        "kind":"parameter",
+        "value":8.0E1,
+        "class":"parameter",
+        "latex":"\\Delta~{\\rm vel},({\\rm 100 km\\,s}^{-1})"
+    },
+    "eta_ni":{
+        "kind":"parameter",
+        "value":0.5,
+        "class":"parameter",
+        "latex":"\\eta_{\\rm ni}"
+    },
+    "eta_he":{
+        "kind":"parameter",
+        "value":0.5,
+        "class":"parameter",
+        "latex":"\\eta_{\\rm he}"
+    },
+    "eta_op":{
+        "kind":"parameter",
+        "value":0.5,
+        "class":"parameter",
+        "latex":"\\eta_{\\rm op}"
+    },
+    "m_ni":{
+        "kind":"parameter",
+        "value":0.0045,
+        "class":"parameter",
+        "latex":"m_{\\rm ni},(M_\\odot)"
+    },
+    "m_he":{
+        "kind":"parameter",
+        "value":0.028,
+        "class":"parameter",
+        "latex":"m_{\\rm he},(M_\\odot)"
+    },
+    "m_op":{
+        "kind":"parameter",
+        "value":0.0075,
+        "class":"parameter",
+        "latex":"m_{\\rm op},(M_\\odot)"
+    },
+    "blank":{
+        "kind":"engine",
+        "inputs":[
+            "densetimes",
+            "texplosion"
+        ]
+    },
+    "sesn_sedona":{
+        "kind":"sed",
+        "class":"sesn_sedona",
+        "inputs":[
+            "densetimes",
+            "eta_vel",
+            "min_vel",
+            "del_vel",
+            "eta_ni",
+            "eta_he",
+            "eta_op",
+            "m_ni",
+            "m_he",
+            "m_op",
+            "texplosion",
+            "redshift",
+            "blank"
+        ],
+        "requests":{
+            "band_wave_ranges":"photometry"
+        }
+    },
+    "losextinction":{
+        "kind":"sed",
+        "inputs":[
+            "sesn_sedona",
+            "nhhost",
+            "rvhost",
+            "ebv"
+        ],
+        "requests":{
+            "band_wave_ranges": "photometry"
+        }
+    },
+    "photometry":{
+        "kind":"observable",
+        "supports":[
+            "ultraviolet",
+            "optical",
+            "infrared"
+        ],
+        "inputs":[
+            "losextinction",
+            "lumdist"
+        ]
+    }
+}

@@ -1,0 +1,1 @@
+SESN SEDONA emulator weights live in mosfit/emulators/sesn_sedona/ (see mosfit.emulators.emulator_weights_dir).

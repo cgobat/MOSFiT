@@ -123,37 +123,38 @@ def listify(x):
 
 
 def entabbed_json_dumps(string, **kwargs):
-    """Produce entabbed string for JSON output.
+    """Serialize ``string`` to compact JSON (no indentation).
 
-    This is necessary because Python 2 does not allow tabs to be used in its
-    JSON dump(s) functions.
+    Historically this produced tab-indented (“entabbed”) JSON for readability,
+    but that dominates CPU and file size for large products such as
+    ``walkers.json``. Compact output is used instead.
     """
+    separators = kwargs.get('separators', (',', ':'))
     if sys.version_info[:2] >= (3, 3):
         return json.dumps(
             string,
-            indent='\t',
-            separators=kwargs['separators'],
+            indent=None,
+            separators=separators,
             ensure_ascii=False)
-    newstr = unicode(json.dumps(  # pylint: disable=undefined-variable
+    return unicode(json.dumps(  # pylint: disable=undefined-variable
         string,
-        indent=4,
-        separators=kwargs['separators'],
+        indent=None,
+        separators=separators,
         ensure_ascii=False,
         encoding='utf8'))
-    newstr = re.sub(
-        '\n +',
-        lambda match: '\n' + '\t' * (len(match.group().strip('\n')) / 4),
-        newstr)
-    return newstr
+
+
+def write_json_payload(f, payload):
+    """Write a string from ``entabbed_json_dumps`` (handles encoding edge cases)."""
+    try:
+        f.write(payload)
+    except UnicodeEncodeError:
+        f.write(payload.encode('ascii', 'replace').decode())
 
 
 def entabbed_json_dump(dic, f, **kwargs):
     """Write `entabbed_json_dumps` output to file handle."""
-    string = entabbed_json_dumps(dic, **kwargs)
-    try:
-        f.write(string)
-    except UnicodeEncodeError:
-        f.write(string.encode('ascii', 'replace').decode())
+    write_json_payload(f, entabbed_json_dumps(dic, **kwargs))
 
 
 def calculate_WAIC(scores):
@@ -233,13 +234,11 @@ def is_master():
 
 def speak(text, lang='es'):
     """Text to speech. For fun."""
-    from googletrans import Translator
     from gtts import gTTS
     from pygame import mixer
     from tempfile import TemporaryFile
 
-    translator = Translator()
-    tts = gTTS(text=translator.translate(text, dest=lang).text, lang=lang)
+    tts = gTTS(text=text, lang=lang)
     mixer.init()
 
     sf = TemporaryFile()
@@ -628,6 +627,84 @@ def slugify(value, allow_unicode=False):
             'ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s-]', '', value).strip()
     return re.sub(r'[-\s]+', '-', value)
+
+
+def write_chain_hdf5(filepath, samples, param_names):
+    """Atomically write an MCMC chain to an HDF5 file.
+
+    Parameters
+    ----------
+    filepath : str
+        Destination path (typically ``chain.h5``).
+    samples : array-like
+        Chain array with shape ``(ntemps, nwalkers, nsteps, nparams)``.
+    param_names : sequence of str
+        Free-parameter names aligned with the last axis of ``samples``.
+    """
+    import h5py
+
+    samples = np.asarray(samples)
+    str_dtype = h5py.string_dtype(encoding='utf-8')
+    names = np.asarray(list(param_names), dtype=object)
+    with temp_atomic(
+            suffix='.h5',
+            dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
+        with h5py.File(tmppath, 'w') as hf:
+            hf.create_dataset(
+                'samples', data=samples, compression='gzip',
+                compression_opts=4)
+            hf.create_dataset('param_names', data=names, dtype=str_dtype)
+            hf['samples'].attrs['axes'] = (
+                'temperature', 'walker', 'step', 'parameter')
+        if os.path.isfile(filepath):
+            os.remove(filepath)
+        os.rename(tmppath, filepath)
+
+
+def write_walkers_hdf5(filepath, entry_dict):
+    """Atomically write a walkers product (merged event + model) to HDF5.
+
+    The catalog-shaped payload is stored as gzip-compressed UTF-8 JSON bytes
+    under the ``entry_json`` dataset. Same information as the historic
+    ``walkers.json``, in a smaller on-disk form.
+    """
+    import h5py
+
+    payload = entabbed_json_dumps(
+        entry_dict, separators=(',', ':')).encode('utf-8')
+    raw = np.frombuffer(payload, dtype=np.uint8)
+    with temp_atomic(
+            suffix='.h5',
+            dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
+        with h5py.File(tmppath, 'w') as hf:
+            ds = hf.create_dataset(
+                'entry_json', data=raw, compression='gzip',
+                compression_opts=4)
+            ds.attrs['format'] = 'json'
+            ds.attrs['encoding'] = 'utf-8'
+        if os.path.isfile(filepath):
+            os.remove(filepath)
+        os.rename(tmppath, filepath)
+
+
+def load_walkers_file(filepath):
+    """Load a walkers product from ``.h5`` or legacy ``.json``.
+
+    Returns
+    -------
+    dict
+        Top-level walkers dictionary (event-name key wrapping the entry, or
+        an older flat entry dict).
+    """
+    path = os.path.abspath(filepath)
+    if path.endswith(('.h5', '.hdf5')):
+        import h5py
+        with h5py.File(path, 'r') as hf:
+            raw = np.asarray(hf['entry_json'][:], dtype=np.uint8)
+        return json.loads(
+            raw.tobytes().decode('utf-8'), object_pairs_hook=OrderedDict)
+    with codecs.open(path, 'r', encoding='utf-8') as f:
+        return json.load(f, object_pairs_hook=OrderedDict)
 
 
 # Below from

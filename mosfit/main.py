@@ -3,7 +3,6 @@
 
 import argparse
 import codecs
-import locale
 import os
 import shutil
 import sys
@@ -18,7 +17,7 @@ from six import string_types
 from mosfit import __author__, __contributors__, __version__
 from mosfit.fitter import Fitter
 from mosfit.printer import Printer
-from mosfit.utils import get_mosfit_hash, is_master, open_atomic, speak
+from mosfit.utils import get_mosfit_hash, is_master, speak
 
 
 class SortingHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
@@ -30,27 +29,14 @@ class SortingHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
         super(SortingHelpFormatter, self).add_arguments(actions)
 
 
-def get_parser(only=None, printer=None):
+def get_parser(printer=None):
     """Retrieve MOSFiT's `argparse.ArgumentParser` object."""
     prt = Printer() if printer is None else printer
 
     parser = argparse.ArgumentParser(
         prog='mosfit',
         description='Fit astrophysical transients.',
-        formatter_class=SortingHelpFormatter,
-        add_help=only is None)
-
-    parser.add_argument(
-        '--language',
-        dest='language',
-        type=str,
-        const='select',
-        default='en',
-        nargs='?',
-        help=("Language for output text."))
-
-    if only == 'language':
-        return parser
+        formatter_class=SortingHelpFormatter)
 
     parser.add_argument(
         '--events',
@@ -351,13 +337,6 @@ def get_parser(only=None, printer=None):
         help=prt.text('parser_force_copy'))
 
     parser.add_argument(
-        '--offline',
-        dest='offline',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_offline'))
-
-    parser.add_argument(
         '--prefer-cache',
         dest='prefer_cache',
         default=False,
@@ -388,14 +367,6 @@ def get_parser(only=None, printer=None):
         type=int,
         default=-1,
         help=prt.text('slice_sampler_steps'))
-
-    parser.add_argument(
-        '--upload',
-        '-u',
-        dest='upload',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_upload'))
 
     parser.add_argument(
         '--run-until-converged',
@@ -476,21 +447,6 @@ def get_parser(only=None, printer=None):
         help=prt.text('parser_print_trees'))
 
     parser.add_argument(
-        '--set-upload-token',
-        dest='set_upload_token',
-        const=True,
-        default=False,
-        nargs='?',
-        help=prt.text('parser_set_upload_token'))
-
-    parser.add_argument(
-        '--ignore-upload-quality',
-        dest='check_upload_quality',
-        default=True,
-        action='store_false',
-        help=prt.text('parser_check_upload_quality'))
-
-    parser.add_argument(
         '--test',
         dest='test',
         default=False,
@@ -528,27 +484,11 @@ def get_parser(only=None, printer=None):
         help=prt.text('parser_extra_outputs'))
 
     parser.add_argument(
-        '--catalogs',
-        '-C',
-        dest='catalogs',
-        default=[],
-        nargs='+',
-        help=prt.text('parser_catalogs'))
-
-    parser.add_argument(
         '--no-guessing',
         dest='no_guessing',
         default=False,
         action='store_true',
         help=prt.text('parser_no_guessing'))
-
-    parser.add_argument(
-        '--open-in-browser',
-        '-O',
-        dest='open_in_browser',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_open_in_browser'))
 
     parser.add_argument(
         '--exit-on-prompt',
@@ -558,20 +498,6 @@ def get_parser(only=None, printer=None):
         help=prt.text('parser_exit_on_prompt'))
 
     parser.add_argument(
-        '--download-recommended-data',
-        dest='download_recommended_data',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_download_recommended_data'))
-
-    parser.add_argument(
-        '--local-data-only',
-        dest='local_data_only',
-        default=False,
-        action='store_true',
-        help=prt.text('parser_local_data_only'))
-
-    parser.add_argument(
         '--method',
         '-D',
         dest='method',
@@ -579,61 +505,17 @@ def get_parser(only=None, printer=None):
         default='ensembler',
         help=prt.text('parser_method'))
 
-    parser.add_argument(
-        '--cache-path',
-        dest='cache_path',
-        default='',
-        help=prt.text('parser_cache_path'))
-
     return parser
 
 
 def main():
     """Run MOSFiT."""
-    prt = Printer(
-        wrap_length=100, quiet=False, language='en', exit_on_prompt=False)
-
-    parser = get_parser(only='language')
-    args, _ = parser.parse_known_args()
-
-    if args.language == 'en':
-        loc = locale.getlocale()
-        if loc[0]:
-            args.language = loc[0].split('_')[0]
-
-    if args.language != 'en':
-        try:
-            from googletrans.constants import LANGUAGES
-        except Exception:
-            raise RuntimeError('`--language` requires `googletrans` package, '
-                               'install with `pip install googletrans`.')
-
-        if args.language == 'select' or args.language not in LANGUAGES:
-            languages = list(
-                sorted([
-                    LANGUAGES[x].title().replace('_', ' ') + ' (' + x + ')'
-                    for x in LANGUAGES
-                ]))
-            sel = prt.prompt(
-                'Select a language:',
-                kind='select',
-                options=languages,
-                message=False)
-            args.language = sel.split('(')[-1].strip(')')
-
-    prt = Printer(language=args.language)
-
-    language = args.language
-
-    parser = get_parser(printer=prt)
+    parser = get_parser(printer=Printer(exit_on_prompt=False))
     args = parser.parse_args()
-
-    args.language = language
 
     prt = Printer(
         wrap_length=100,
         quiet=args.quiet,
-        language=args.language,
         exit_on_prompt=args.exit_on_prompt)
 
     if args.version:
@@ -685,7 +567,7 @@ def main():
 
     if args.generative:
         if args.iterations > 0:
-            prt.message('generative_supercedes', warning=True)
+            prt.message('generator_supercedes', warning=True)
         args.iterations = 0
 
     no_events = False
@@ -802,80 +684,6 @@ def main():
                 width=width,
                 wrapped=False)
 
-        # Get/set upload token
-        upload_token = ''
-        get_token_from_user = False
-        if args.set_upload_token:
-            if args.set_upload_token is not True:
-                upload_token = args.set_upload_token
-            get_token_from_user = True
-
-        upload_token_path = os.path.join(dir_path, 'cache', 'dropbox.token')
-
-        # Perform a few checks on upload before running (to keep size
-        # manageable)
-        if args.upload and not args.test and args.smooth_times > 100:
-            response = prt.prompt('ul_warning_smooth')
-            if response:
-                args.upload = False
-            else:
-                sys.exit()
-
-        if (args.upload and not args.test and args.num_walkers is not None
-                and args.num_walkers < 100):
-            response = prt.prompt('ul_warning_few_walkers')
-            if response:
-                args.upload = False
-            else:
-                sys.exit()
-
-        if (args.upload and not args.test and args.num_walkers
-                and args.num_walkers * args.num_temps > 500):
-            response = prt.prompt('ul_warning_too_many_walkers')
-            if response:
-                args.upload = False
-            else:
-                sys.exit()
-
-        if args.upload:
-            if not os.path.isfile(upload_token_path):
-                get_token_from_user = True
-            else:
-                with open(upload_token_path, 'r') as f:
-                    upload_token = f.read().splitlines()
-                    if len(upload_token) != 1:
-                        get_token_from_user = True
-                    elif len(upload_token[0]) != 64:
-                        get_token_from_user = True
-                    else:
-                        upload_token = upload_token[0]
-
-        if get_token_from_user:
-            if args.test:
-                upload_token = ('1234567890abcdefghijklmnopqrstuvwxyz'
-                                '1234567890abcdefghijklmnopqr')
-            while len(upload_token) != 64:
-                prt.message(
-                    'no_ul_token', ['https://sne.space/mosfit/'], wrapped=True)
-                upload_token = prt.prompt('paste_token', kind='string')
-                if len(upload_token) != 64:
-                    prt.prt(
-                        'Error: Token must be exactly 64 characters in '
-                        'length.',
-                        wrapped=True)
-                    continue
-                break
-            with open_atomic(upload_token_path, 'w') as f:
-                f.write(upload_token)
-
-        if args.upload:
-            prt.prt(
-                "Upload flag set, will upload results after completion.",
-                wrapped=True)
-            prt.prt("Dropbox token: " + upload_token, wrapped=True)
-
-        args.upload_token = upload_token
-
         if no_events:
             prt.message('iterations_0', wrapped=True)
 
@@ -887,11 +695,14 @@ def main():
                 fc = prt.prompt('force_copy')
             if not os.path.exists('jupyter'):
                 os.mkdir(os.path.join('jupyter'))
-            if not os.path.isfile(os.path.join('jupyter',
-                                               'mosfit.ipynb')) or fc:
-                shutil.copy(
-                    os.path.join(dir_path, 'jupyter', 'mosfit.ipynb'),
-                    os.path.join(os.getcwd(), 'jupyter', 'mosfit.ipynb'))
+            jupyter_src = os.path.join(dir_path, 'jupyter')
+            for nb_name in sorted(os.listdir(jupyter_src)):
+                if not nb_name.endswith('.ipynb') or nb_name.startswith('.'):
+                    continue
+                dst_nb = os.path.join(os.getcwd(), 'jupyter', nb_name)
+                if not os.path.isfile(dst_nb) or fc:
+                    shutil.copy(
+                        os.path.join(jupyter_src, nb_name), dst_nb)
 
             if not os.path.exists('modules'):
                 os.mkdir(os.path.join('modules'))

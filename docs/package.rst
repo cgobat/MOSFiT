@@ -12,23 +12,19 @@ If you wish to produce light curves or other data products for a given model wit
 Produce model outputs
 ---------------------
 
-In the code snippet below, we fetch a supernova's data from the Open Catalogs using the ``Fetcher`` class, create a ``Model`` that initializes from the fetched data, and finally run the model:
+In the snippet below, we resolve a **local** catalog-format JSON path with ``Fetcher``, build a ``Model``, load that event, and evaluate the model stack once. ``Fetcher`` does not query the Open Astronomy Catalogs; the file must exist on disk.
 
 .. code-block:: python
 
     import mosfit
     import numpy as np
 
-    # Create an instance of the `Fetcher` class.
+    event_path = 'path/to/my_supernova.json'  # AstroCats-compatible JSON file
+
     my_fetcher = mosfit.fetcher.Fetcher()
+    fetched = my_fetcher.fetch([event_path])[0]
 
-    # Fetch some data from the Open Supernova Catalog.
-    fetched = my_fetcher.fetch('SN2009do')[0]
-
-    # Instantiatiate the `Model` class (selecting 'slsn' as the model).
     my_model = mosfit.model.Model(model='slsn')
-
-    # Load the fetched data into the model.
     my_model.load_data(my_fetcher.load_data(fetched), event_name=fetched['name'])
 
     # Generate a random input vector of free parameters.

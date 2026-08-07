@@ -4,7 +4,7 @@ import numpy as np
 from astropy import constants as c
 from astropy import units as u
 from mosfit.modules.seds.sed import SED
-from mosfit.constants import SQRT_2_PI
+from mosfit.constants import BOL_BAND_INDEX, SQRT_2_PI
 
 
 # Important: Only define one ``Module`` class per file.
@@ -56,6 +56,8 @@ class Line(SED):
         for li, lum in enumerate(self._luminosities):
             bi = self._band_indices[li]
             if lum == 0.0:
+                continue
+            if bi == BOL_BAND_INDEX:
                 continue
 
             bind = czp1A / self._frequencies[li] if bi < 0 else bi

@@ -23,19 +23,19 @@ If ``MOSFiT`` is the first ``conda`` program you've used, and you previously use
 Is MOSFiT using the correct data?
 =================================
 
-If private data is not provided to ``MOSFiT``, it will draw data from the Open Astronomy Catalogs (the `Open Supernova Catalog <https://sne.space>`_ and the `Open Tidal Disruption Catalog <https://tde.space>`_). These catalogs are constructed by combining data from hundreds of individual sources, any one of which could have had an issue when being imported into the OACs. If you suspect the data contained for a transient on one of these catalogs is incorrect, please open an issue on the appropriate catalog repository (links to the repositories are available on the `AstroCats homepage <https://astrocats.space>`_) and the error will be corrected ASAP.
+``MOSFiT`` reads **only** the files you pass with ``-e`` (catalog-format JSON on disk or ASCII consumed by the converter). It does **not** download event payloads from catalog websites. Correctness is therefore entirely governed by **your** inputs—validate photometric systems, source tags, units, and time standards before trusting fits.
 
-If you must correct the error immediately, feel free to copy the input file downloaded by ``MOSFiT`` (saved in a cache directory, the location of which is printed by ``MOSFiT`` when it runs) to your run directory and edit it on your own computer to fix the errors. But please *also* report the errors on the above issues pages so that the whole community will benefit!
+Keep a reproducible snapshot: immutable input JSON path or checksum, exact command line, and the ``products/walkers.h5`` (and optional ``chain.h5`` / extras) emitted by that run.
 
 Can I fit private data with MOSFiT?
 ===================================
 
-Yes! Simply pass your ASCII datafile to the ``-e`` flag instead of the name of the transient you wish to fit. Your data will remain private unless you choose to upload it with the optional ``-u`` flag, which will warn you before any data is uploaded publicly. More info on fitting private data can be found :ref:`here <private>`.
+Yes! Pass the path to your ASCII datafile or catalog-format JSON using the ``-e`` flag. ``MOSFiT`` no longer fetches events over the network or uploads via ``-u``. More info can be found in :ref:`Event data / ASCII <private>` in the fitting docs.
 
 How do I exclude particular instruments/bands/sources from my fit?
 ==================================================================
 
-Excluding instruments can be accomplished by using the ``--exclude-instruments`` option, and excluding bands can be accomplished using the ``--exclude-bands`` option. All the data from a particular source (e.g. a paper or survey) can be excluded using ``--exclude-sources`` (see :ref:`here <restricting>` for more information on restricting your dataset). More complicated exclusion rules (say ignoring a particular band from a particular instrument, but not for other instruments) are most easily accomplished by simply deleting the unwanted data from the input file; users should copy the cached version downloaded from the Open Astronomy Catalogs to their run directory and edit the files to remove the data.
+Excluding instruments can be accomplished by using the ``--exclude-instruments`` option, and excluding bands can be accomplished using the ``--exclude-bands`` option. All the data from a particular source (e.g. a paper or survey) can be excluded using ``--exclude-sources`` (see :ref:`here <restricting>` for more information on restricting your dataset). Finer exclusions (one band–instrument combination but not others) are often simplest by editing your input catalog JSON directly before fitting.
 
 .. _contact:
 

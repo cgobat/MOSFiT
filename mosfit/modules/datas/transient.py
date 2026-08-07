@@ -5,11 +5,36 @@ import numpy as np
 from astrocats.catalog.source import SOURCE
 from astrocats.catalog.utils import is_number
 from astropy.time import Time as astrotime
+from mosfit.constants import BOL_MAG_BAND_LABEL
 from mosfit.modules.module import Module
 from mosfit.utils import listify
 
 
 # Important: Only define one ``Module`` class per file.
+
+
+def _entry_field_nonempty(entry, name):
+    """True if photometry key exists and is usable (not blank / null)."""
+    return name in entry and entry.get(name) not in (None, '')
+
+
+# Maps catalog photometry subkeys → ``_data`` array names. (``luminosity`` must not
+# pluralize to ``luminosities`` — that key is reserved for model SED normalization.)
+_PHOTOMETRY_DATA_KEYS = {
+    'luminosity': 'observed_luminosities',
+    'e_luminosity': 'e_observed_luminosities',
+    'e_upper_luminosity': 'e_upper_observed_luminosities',
+    'e_lower_luminosity': 'e_lower_observed_luminosities',
+    'u_luminosity': 'u_observed_luminosities',
+}
+
+# Absolute bolometric magnitude (``mbol``) → apparent-magnitude column names.
+_PHOTOMETRY_MBOL_KEYS = {
+    'mbol': 'magnitudes',
+    'e_mbol': 'e_magnitudes',
+    'e_upper_mbol': 'e_upper_magnitudes',
+    'e_lower_mbol': 'e_lower_magnitudes',
+}
 
 
 class Transient(Module):
@@ -113,6 +138,7 @@ class Transient(Module):
 
             # Only include data that contains all subkeys
             for entry in subdata:
+                mbol_here = False
                 if any([x not in entry for x in req_subkeys]):
                     continue
                 if any([x in entry for x in exc_subkeys]):
@@ -155,8 +181,68 @@ class Transient(Module):
                             (not len(ex_kinds) or 'none' not in ex_kinds) and
                                 'x-ray' not in self._model._kinds_supported):
                             continue
-                    if 'magnitude' in entry:
-                        # For now, magnitudes are not excludable.
+
+                    lum_bol_here = (
+                        'luminosity' in entry and
+                        entry['luminosity'] is not None and
+                        entry['luminosity'] != '')
+                    mbol_here = _entry_field_nonempty(entry, 'mbol')
+                    mag_bol_band_here = (
+                        entry.get('band') == BOL_MAG_BAND_LABEL and
+                        _entry_field_nonempty(entry, 'magnitude'))
+                    if lum_bol_here and (mbol_here or mag_bol_band_here):
+                        continue
+                    if mbol_here and _entry_field_nonempty(entry, 'magnitude'):
+                        continue
+
+                    bol_mag_no_conflicts = not any([
+                        _entry_field_nonempty(entry, kk) for kk in (
+                            'luminosity',
+                            'fluxdensity',
+                            'countrate',
+                            'flux',
+                            'unabsorbedflux',
+                        )
+                    ])
+
+                    def _maybe_add_bolometric():
+                        """Register bolometric kind if model Task JSON allows it."""
+                        ph_task = (
+                            self._model._call_stack.get('photometry', {}))
+                        ph_sup = ph_task.get('supports', ())
+                        bolometric_ok = isinstance(
+                            ph_sup, (list, tuple)) and (
+                                'bolometric' in ph_sup)
+                        if ('bolometric' in ex_kinds or (
+                                (not len(ex_kinds) or 'none' not in ex_kinds)
+                                and not bolometric_ok)):
+                            return False
+                        self._kinds_needed.add('bolometric')
+                        return True
+
+                    if lum_bol_here:
+                        no_other_phot = not any([
+                            k in entry and entry.get(k) not in (None, '')
+                            for k in (
+                                'magnitude',
+                                'mbol',
+                                'fluxdensity',
+                                'countrate',
+                                'flux',
+                                'unabsorbedflux',
+                            )
+                        ])
+                        if no_other_phot:
+                            if not _maybe_add_bolometric():
+                                continue
+                    if bol_mag_no_conflicts and (
+                            mbol_here or mag_bol_band_here):
+                        if not _maybe_add_bolometric():
+                            continue
+
+                    # Bolometric magnitude does not imply optical/IR/UV bands.
+                    if ('magnitude' in entry and not (
+                            mag_bol_band_here)):
                         self._kinds_needed |= set(
                             ['infrared', 'optical', 'ultraviolet'])
 
@@ -212,14 +298,17 @@ class Transient(Module):
                     if skip_entry:
                         continue
 
-                    if ((('magnitude' in entry) != ('band' in entry)) or
-                        ((('fluxdensity' in entry) != (
-                            'frequency' in entry)) and (
-                                'magnitude' not in entry)) or
-                        (('countrate' in entry) and
-                         ('magnitude' not in entry) and
-                         ('instrument' not in entry))):
-                        continue
+                    is_bolom_mag_row = (
+                        mbol_here or mag_bol_band_here)
+                    if not is_bolom_mag_row:
+                        if ((('magnitude' in entry) != ('band' in entry)) or
+                            ((('fluxdensity' in entry) != (
+                                'frequency' in entry)) and (
+                                    'magnitude' not in entry)) or
+                            (('countrate' in entry) and
+                             ('magnitude' not in entry) and
+                             ('instrument' not in entry))):
+                            continue
 
                 for x in subkeys:
                     falseval = (
@@ -229,8 +318,31 @@ class Transient(Module):
                         if not skip_key:
                             self._data[key] = entry.get(x, falseval)
                     else:
-                        plural = self._model.plural(x)
+                        if (key == 'photometry' and
+                                x in _PHOTOMETRY_MBOL_KEYS):
+                            plural = _PHOTOMETRY_MBOL_KEYS[x]
+                        elif (key == 'photometry' and
+                                x in _PHOTOMETRY_DATA_KEYS):
+                            plural = _PHOTOMETRY_DATA_KEYS[x]
+                        else:
+                            plural = self._model.plural(x)
                         val = entry.get(x, falseval)
+                        if key == 'photometry' and x == 'band' and mbol_here:
+                            val = BOL_MAG_BAND_LABEL
+                        # Avoid two ``magnitudes`` / ``e_*magnitudes`` slots per
+                        # epoch when ``mbol`` supplies the observable (schema
+                        # still iterates optional ``magnitude`` / ``e_*`` keys).
+                        if (key == 'photometry' and mbol_here and x in (
+                                'magnitude',
+                                'e_magnitude',
+                                'e_upper_magnitude',
+                                'e_lower_magnitude')):
+                            continue
+                        # Likewise, do not append empty ``mbol`` / ``e_*mbol``
+                        # placeholders when the row uses band magnitudes.
+                        if (key == 'photometry' and not mbol_here and
+                                x in _PHOTOMETRY_MBOL_KEYS):
+                            continue
                         if x in num_subkeys:
                             val = None if val is None else np.mean([
                                 float(x) for x in listify(val)])
@@ -243,7 +355,10 @@ class Transient(Module):
                                 'unmatched_' + plural, []).append(val)
 
         if 'times' not in self._data or not any([x in self._data for x in [
-                'magnitudes', 'frequencies', 'countrates']]):
+                'magnitudes',
+                'frequencies',
+                'countrates',
+                'observed_luminosities']]):
             prt.message('no_fittable_data', [name])
             return False
 
@@ -264,17 +379,22 @@ class Transient(Module):
                     self._data_determined_parameters.append(key)
 
         if any(x in self._data for x in [
-                'magnitudes', 'countrates', 'fluxdensities']):
+                'magnitudes',
+                'countrates',
+                'fluxdensities',
+                'observed_luminosities']):
             # Add a list of tags for each observation to indicate what unit
             # observation is provided in.
             self._data['measures'] = [(
                 (['magnitude'] if x else []) +
                 (['countrate'] if y else []) +
-                (['fluxdensity'] if x else []))
-                for x, y, z in zip(*(
+                (['fluxdensity'] if z else []) +
+                (['luminosity'] if w else []))
+                for x, y, z, w in zip(*(
                     self._data['magnitudes'],
                     self._data['countrates'],
-                    self._data['fluxdensities']))]
+                    self._data['fluxdensities'],
+                    self._data['observed_luminosities']))]
 
         if 'times' in self._data and (smooth_times >= 0 or time_list):
             # Build an observation array out of the real data first.
