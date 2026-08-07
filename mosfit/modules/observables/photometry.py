@@ -575,7 +575,7 @@ class Photometry(Module):
             model_observations[mbol_fit_mask] = luminosity_cgs_to_mbol(
                 lumo_dense[mbol_fit_mask])
 
-        # Get the per-point mask from Sampson, if present
+        # Get the per-point mask from SESNSedona, if present
         valid_mask = kwargs.get("sesn_valid_mask") 
         '''
         print(f"DEBUG photometry: sesn_valid_mask present = {valid_mask is not None}")

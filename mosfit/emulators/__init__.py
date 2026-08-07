@@ -1,6 +1,6 @@
 """Neural and tabulated emulator *weights* live here, separate from SED code.
 
-Each subdirectory (e.g. ``sampson/``) holds artifacts for one emulator that is
+Each subdirectory (e.g. ``sesn_sedona/``) holds artifacts for one emulator that is
 driven from a ``kind: sed`` module under ``mosfit.modules.seds``.
 
 Override the search path at runtime::
@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 def emulator_weights_dir(name: str) -> Path:
-    """Directory containing weight files for emulator ``name`` (e.g. ``'sampson'``)."""
+    """Directory containing weight files for emulator ``name`` (e.g. ``'sesn_sedona'``)."""
     root = os.environ.get("MOSFIT_EMULATOR_DATA")
     if root:
         candidate = Path(root).expanduser() / name

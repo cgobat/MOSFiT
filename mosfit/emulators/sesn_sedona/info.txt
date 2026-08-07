@@ -1,0 +1,16 @@
+I am using the emulator from idx=170,epochs = 90 here.
+parameters of this training:
+
+called train_small.py with factor 0.85, weight_decay: 0.0001, lr 0.0005, with patience 7
+dim2000_factor0.85_patience7_nhead64_numlayers5_learnedPETrue_lr0.0005_weightdecay0.0001_batchsize512_epochs150_idx170_MLPTrue
+preprocessed_spectra_file: /n/home07/kyadavalli/scratch/NeuralNetworks/MOperation/spectra_tmin4_tmax60_N15.pt
+normalization_stats_file: /n/home07/kyadavalli/scratch/NeuralNetworks/MOperation/normalization_stats_tmin4_tmax60_N15.pt
+
+Weight files in this directory:
+  sed_emulator.pth            — SESN SEDONA SED flux network
+  sed_normalization_stats.pt  — descriptor / time / flux normalization
+  velocity_profile.pt         — Dash velocity-profile decoder
+  helium_profile.pt           — He mass-profile decoder
+  nickel_profile.pt           — Ni mass-profile decoder
+  opacity_profile.pt          — bulk opacity mass-profile decoder
+See mosfit.emulators.sesn_sedona.profiles.

@@ -1,7 +1,7 @@
 """Preset systematic uncertainty (mag) vs rest-frame time for emulators.
 
 Combines an exponential fit to emulator performance on Sedona models with an
-RMS floor from Sedona–CMFGen light-curve comparisons.
+RMS floor from Sedona–CMFGen light-curve comparisons, in quadrature.
 
 Any SED module may emit ``emulator_preset_systematic_mag``; :class:`Diagonal`
 adds ``sigma**2`` to the diagonal only for magnitude-like observations.
@@ -28,10 +28,11 @@ def preset_systematic_mag(
     peak_t_rest_day: float = None,
 ) -> np.ndarray:
     """
-    Systematic uncertainty (mag) from emulator performance and Sedona–CMFGen RMS.
+    Systematic uncertainty (mag): emulator performance and Sedona–CMFGen RMS
+    combined in quadrature.
 
     The optional ``t_emulator_min`` / ``sys_*`` arguments are accepted for
-    compatibility with :class:`~mosfit.modules.seds.sampson.Sampson` but are
+    compatibility with :class:`~mosfit.modules.seds.sesn_sedona.SESNSedona` but are
     not used (uncertainty is data-driven, not the old U-shaped preset).
     """
     t = np.asarray(t_rest_days_eval, dtype=np.float64)
@@ -39,8 +40,8 @@ def preset_systematic_mag(
     if flat:
         t = t.reshape(1)
 
-    out = 0.124837 + 1.703078 * np.exp(-0.278435 * t)
-    out += rms_sedona_uncertainty(t)
+    emu = 0.124837 + 1.703078 * np.exp(-0.278435 * t)
+    out = np.sqrt(emu**2 + rms_sedona_uncertainty(t)**2)
 
     if flat:
         return out.reshape(())

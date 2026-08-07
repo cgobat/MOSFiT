@@ -695,11 +695,14 @@ def main():
                 fc = prt.prompt('force_copy')
             if not os.path.exists('jupyter'):
                 os.mkdir(os.path.join('jupyter'))
-            if not os.path.isfile(os.path.join('jupyter',
-                                               'mosfit.ipynb')) or fc:
-                shutil.copy(
-                    os.path.join(dir_path, 'jupyter', 'mosfit.ipynb'),
-                    os.path.join(os.getcwd(), 'jupyter', 'mosfit.ipynb'))
+            jupyter_src = os.path.join(dir_path, 'jupyter')
+            for nb_name in sorted(os.listdir(jupyter_src)):
+                if not nb_name.endswith('.ipynb') or nb_name.startswith('.'):
+                    continue
+                dst_nb = os.path.join(os.getcwd(), 'jupyter', nb_name)
+                if not os.path.isfile(dst_nb) or fc:
+                    shutil.copy(
+                        os.path.join(jupyter_src, nb_name), dst_nb)
 
             if not os.path.exists('modules'):
                 os.mkdir(os.path.join('modules'))

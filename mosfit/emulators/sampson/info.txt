@@ -1,7 +1,0 @@
-I am using the emulator from idx=170,epochs = 90 here.
-parameters of this training:
-
-called train_small.py with factor 0.85, weight_decay: 0.0001, lr 0.0005, with patience 7
-dim2000_factor0.85_patience7_nhead64_numlayers5_learnedPETrue_lr0.0005_weightdecay0.0001_batchsize512_epochs150_idx170_MLPTrue
-preprocessed_spectra_file: /n/home07/kyadavalli/scratch/NeuralNetworks/MOperation/spectra_tmin4_tmax60_N15.pt
-normalization_stats_file: /n/home07/kyadavalli/scratch/NeuralNetworks/MOperation/normalization_stats_tmin4_tmax60_N15.pt

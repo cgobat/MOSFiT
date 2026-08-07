@@ -1,9 +1,9 @@
 """
-sampson.py
+sesn_sedona.py
 
-MOSFiT SED module wrapping the stripped-envelope SN emulator ("sampson").
+MOSFiT SED module wrapping the stripped-envelope SN SEDONA emulator.
 
-Weights ship under ``mosfit/emulators/sampson/`` (or ``$MOSFIT_EMULATOR_DATA/sampson``).
+Weights ship under ``mosfit/emulators/sesn_sedona/`` (or ``$MOSFIT_EMULATOR_DATA/sesn_sedona``).
 
 This class:
 - builds a descriptor vector from MOSFiT parameters,
@@ -75,14 +75,14 @@ class SimpleFluxMLP(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-# Weights live under ``mosfit/emulators/sampson/`` (or MOSFIT_EMULATOR_DATA).
+# Weights live under ``mosfit/emulators/sesn_sedona/`` (or MOSFIT_EMULATOR_DATA).
 # ---------------------------------------------------------------------------
-_EMULATOR_NAME = "sampson"
+_EMULATOR_NAME = "sesn_sedona"
 _WEIGHTS_DIR = emulator_weights_dir(_EMULATOR_NAME)
 NORMALIZATION_STATS_PATH = str(
-    _WEIGHTS_DIR / "normalization_stats_tmin5_tmax60_N15.pt"
+    _WEIGHTS_DIR / "sed_normalization_stats.pt"
 )
-EMULATOR_WEIGHTS_PATH = str(_WEIGHTS_DIR / "emulator.pth")
+EMULATOR_WEIGHTS_PATH = str(_WEIGHTS_DIR / "sed_emulator.pth")
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ EMULATOR_WEIGHTS_PATH = str(_WEIGHTS_DIR / "emulator.pth")
 # ---------------------------------------------------------------------------
 
 
-class Sampson(SED):
+class SESNSedona(SED):
     """Stripped-envelope spectral energy distribution from NN emulator."""
     
     # Physical constants (cgs)
@@ -130,13 +130,13 @@ class Sampson(SED):
         """Initialize module and lazily load emulator + stats once."""
         super().__init__(*args, **kwargs)
 
-        if not Sampson._loaded:
+        if not SESNSedona._loaded:
             # ------------------------------------------------------------------
             # Load normalization statistics (mean/std for descriptor, time, flux)
             # ------------------------------------------------------------------
             msd = torch.load(
                 NORMALIZATION_STATS_PATH,
-                map_location=Sampson.device,
+                map_location=SESNSedona.device,
                 weights_only=False,  # needed in PyTorch 2.6+ for non-state_dict
             )
             if not isinstance(msd, dict):
@@ -149,7 +149,7 @@ class Sampson(SED):
             # Move tensor values to device as float32
             for k, v in list(msd.items()):
                 if torch.is_tensor(v):
-                    msd[k] = v.to(device=Sampson.device, dtype=torch.float32)
+                    msd[k] = v.to(device=SESNSedona.device, dtype=torch.float32)
 
             # Basic sanity checks
             assert "descriptor_mean" in msd and "descriptor_std" in msd, \
@@ -169,31 +169,31 @@ class Sampson(SED):
             # Broadcasting will apply mean/std to each wavelength bin.
 
             # Sanity: make sure our fixed_wav_grid and model n_wav agree
-            n_wav = Sampson.fixed_wav_grid.shape[0]
+            n_wav = SESNSedona.fixed_wav_grid.shape[0]
             assert n_wav == 41, f"Expected 41 wavelength bins, got {n_wav}"
 
-            Sampson.mean_std_dict = msd
+            SESNSedona.mean_std_dict = msd
 
             # ------------------------------------------------------------------
             # Build emulator and load weights (SimpleFluxMLP, not Transformer)
             # ------------------------------------------------------------------
-            Sampson.model = SimpleFluxMLP(
+            SESNSedona.model = SimpleFluxMLP(
                 d_model=2000,
                 num_layers=5,
                 n_wavelength=n_wav,
-            ).to(Sampson.device)
+            ).to(SESNSedona.device)
 
             state_dict = torch.load(
                 EMULATOR_WEIGHTS_PATH,
                 map_location="cpu",  # state_dict is device-agnostic
                 weights_only=True,   # this file is a pure state_dict
             )
-            Sampson.model.load_state_dict(state_dict)
-            Sampson.model.to(Sampson.device)
-            Sampson.model.eval()
+            SESNSedona.model.load_state_dict(state_dict)
+            SESNSedona.model.to(SESNSedona.device)
+            SESNSedona.model.eval()
             torch.set_grad_enabled(False)
 
-            Sampson._loaded = True
+            SESNSedona._loaded = True
 
     def process(self, **kwargs):
         """Run the emulator and return SEDs on MOSFiT's wavelength grid."""
@@ -232,7 +232,7 @@ class Sampson(SED):
 
         # Descriptor parameters from MOSFiT (must match training convention)
         self._eta_vel = kwargs[self.key("eta_vel")]
-        #this will be passed in, in units of km/s. I need it in cm/s
+        # MOSFiT params are in units of 100 km/s; convert to cm/s for the emulator.
         self._min_vel = kwargs[self.key("min_vel")] * 100 * KM_CGS
         self._del_vel = kwargs[self.key("del_vel")] * 100 * KM_CGS
 
@@ -258,11 +258,11 @@ class Sampson(SED):
                 self._mop,
             ],
             dtype=torch.float32,
-            device=Sampson.device,
+            device=SESNSedona.device,
         )
 
         cc = self.C_CONST
-        msd = Sampson.mean_std_dict
+        msd = SESNSedona.mean_std_dict
 
         # ----------------------------------------------------------------------
         # Normalize descriptor and prepare batched input
@@ -282,18 +282,18 @@ class Sampson(SED):
         time_secs_t = torch.tensor(
             time_secs,
             dtype=torch.float32,
-            device=Sampson.device,
+            device=SESNSedona.device,
         )
 
         time_mean = msd["time_mean"]
         time_std = msd["time_std"]
         # Handle possible scalar vs 0-dim tensor
         if not torch.is_tensor(time_mean):
-            time_mean = torch.tensor(time_mean, dtype=torch.float32, device=Sampson.device)
+            time_mean = torch.tensor(time_mean, dtype=torch.float32, device=SESNSedona.device)
         if not torch.is_tensor(time_std):
-            time_std = torch.tensor(time_std, dtype=torch.float32, device=Sampson.device)
-        time_mean = time_mean.to(Sampson.device, dtype=torch.float32)
-        time_std = time_std.to(Sampson.device, dtype=torch.float32)
+            time_std = torch.tensor(time_std, dtype=torch.float32, device=SESNSedona.device)
+        time_mean = time_mean.to(SESNSedona.device, dtype=torch.float32)
+        time_std = time_std.to(SESNSedona.device, dtype=torch.float32)
 
         norm_times_t = (time_secs_t - time_mean) / time_std
         norm_times_t = norm_times_t.view(-1, 1)  # (N_unique, 1)
@@ -307,22 +307,22 @@ class Sampson(SED):
         # ----------------------------------------------------------------------
         
         valid_query_mask = (
-            (unique_times >= Sampson.EMULATOR_T_MIN) & 
-            (unique_times <= Sampson.EMULATOR_T_MAX)
+            (unique_times >= SESNSedona.EMULATOR_T_MIN) & 
+            (unique_times <= SESNSedona.EMULATOR_T_MAX)
         )
 
         if np.any(valid_query_mask):
             valid_input = input_batch[valid_query_mask]
             with torch.no_grad():
                 pred_valid = (
-                    Sampson.model(valid_input) * msd["fluxes_std"] + msd["fluxes_mean"]
+                    SESNSedona.model(valid_input) * msd["fluxes_std"] + msd["fluxes_mean"]
                 )
             # Network outputs log10-like flux bins. Avoid float32 overflow:
             # ``10.** x`` overflows in fp32 near x ≈ log10(3e38) ≈ 38.53; standalone uses
-            # ``exp(clip(log(10)*x))`` in float64 (see sampson_emulator.py).
+            # ``exp(clip(log(10)*x))`` in float64 (see training emulator code).
             pred_lp = pred_valid.detach().cpu().numpy().astype(np.float64)
             lin = np.exp(np.clip(pred_lp * np.log(10.0), -700.0, 700.0))
-            pred_fluxes_valid_np = np.maximum(lin, Sampson.MIN_LINEAR_FLUX)
+            pred_fluxes_valid_np = np.maximum(lin, SESNSedona.MIN_LINEAR_FLUX)
 
         else:
             pred_fluxes_valid_np = None
@@ -336,7 +336,7 @@ class Sampson(SED):
                 valid_idx += 1
             else:
                 flux_by_dense_index[ti] = np.full(
-                    len(Sampson.fixed_wav_grid), np.nan
+                    len(SESNSedona.fixed_wav_grid), np.nan
                 )
 
         # ----------------------------------------------------------------------
@@ -354,7 +354,7 @@ class Sampson(SED):
             dense_time = self._times[ti]  # rest-frame days since explosion
 
             # mark whether this point is inside emulator's training window
-            if Sampson.EMULATOR_T_MIN <= dense_time <= Sampson.EMULATOR_T_MAX:
+            if SESNSedona.EMULATOR_T_MIN <= dense_time <= SESNSedona.EMULATOR_T_MAX:
                 valid_mask[li] = True
 
             # Rest-frame wavelengths for this band
@@ -372,10 +372,10 @@ class Sampson(SED):
             # Interpolate emulator fluxes onto the band rest-frame wavelength grid
             rest_fluxes = np.interp(
                 rest_wavs,
-                Sampson.fixed_wav_grid,
+                SESNSedona.fixed_wav_grid,
                 pred_fluxes_np,
             )
-            rest_fluxes = np.maximum(rest_fluxes, Sampson.MIN_LINEAR_FLUX)
+            rest_fluxes = np.maximum(rest_fluxes, SESNSedona.MIN_LINEAR_FLUX)
 
             # NOTE: `lum` is not currently used to rescale flux.
 
@@ -390,7 +390,7 @@ class Sampson(SED):
         seds[~np.isfinite(seds)] = np.nan
         _finite = np.isfinite(seds)
         if np.any(_finite):
-            seds[_finite] = np.maximum(seds[_finite], Sampson.MIN_LINEAR_FLUX)
+            seds[_finite] = np.maximum(seds[_finite], SESNSedona.MIN_LINEAR_FLUX)
 
         seds = self.add_to_existing_seds(seds, **kwargs)
 
@@ -403,15 +403,15 @@ class Sampson(SED):
             "times_out": obs_times,
         }
 
-        if Sampson.PRESET_SYSTEMATIC_ENABLED:
+        if SESNSedona.PRESET_SYSTEMATIC_ENABLED:
             t_per = self._times[np.asarray(self._dense_indices, dtype=np.intp)]
             tor["emulator_preset_systematic_mag"] = preset_systematic_mag(
                 t_per,
-                Sampson.EMULATOR_T_MIN,
-                Sampson.EMULATOR_T_MAX,
-                Sampson.PRESET_SYS_MIN_MAG,
-                Sampson.PRESET_SYS_MAX_MAG,
-                Sampson.PRESET_SYS_PEAK_T_REST_DAY,
+                SESNSedona.EMULATOR_T_MIN,
+                SESNSedona.EMULATOR_T_MAX,
+                SESNSedona.PRESET_SYS_MIN_MAG,
+                SESNSedona.PRESET_SYS_MAX_MAG,
+                SESNSedona.PRESET_SYS_PEAK_T_REST_DAY,
             )
 
         return tor

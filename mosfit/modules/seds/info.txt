@@ -1,1 +1,1 @@
-Sampson emulator weights live in mosfit/emulators/sampson/ (see mosfit.emulators.emulator_weights_dir).
+SESN SEDONA emulator weights live in mosfit/emulators/sesn_sedona/ (see mosfit.emulators.emulator_weights_dir).
