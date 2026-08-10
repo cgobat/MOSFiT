@@ -374,30 +374,30 @@ class Photometry(Module):
                 self._band_energies[
                     i], self._band_areas[i] = xvals, yvals / xvals
                 self._band_wavelengths[i] = xscale / self._band_energies[i]
-                self._average_wavelengths[i] = np.trapz([
+                self._average_wavelengths[i] = np.trapezoid([
                     x * y
                     for x, y in zip(
                         self._band_areas[i], self._band_wavelengths[i])
-                ], self._band_wavelengths[i]) / np.trapz(
+                ], self._band_wavelengths[i]) / np.trapezoid(
                     self._band_areas[i], self._band_wavelengths[i])
             else:
                 self._band_wavelengths[
                     i], self._transmissions[i] = xvals, yvals
                 # scale by zero-point flux (Flbda = Fnu*c/lbda^2)
-                self._filter_integrals[i] = self.FLUX_STD * np.trapz(
+                self._filter_integrals[i] = self.FLUX_STD * np.trapezoid(
                     np.array(self._transmissions[i]) /
                     np.array(self._band_wavelengths[i]) ** 2,
                     self._band_wavelengths[i])
-                self._count_integrals[i] = self.FLUX_STD * np.trapz(
+                self._count_integrals[i] = self.FLUX_STD * np.trapezoid(
                     np.array(self._transmissions[i]) /
                     np.array(self._band_wavelengths[i]) ** 2 / (
                         H_C_ANG_CGS / self._band_wavelengths[i]),
                     self._band_wavelengths[i])
-                self._average_wavelengths[i] = np.trapz([
+                self._average_wavelengths[i] = np.trapezoid([
                     x * y
                     for x, y in zip(
                         self._transmissions[i], self._band_wavelengths[i])
-                ], self._band_wavelengths[i]) / np.trapz(
+                ], self._band_wavelengths[i]) / np.trapezoid(
                     self._transmissions[i], self._band_wavelengths[i])
 
                 if 'offset' in band:
@@ -530,7 +530,7 @@ class Photometry(Module):
                     yvals = np.interp(
                         wavs, self._band_wavelengths[bi],
                         self._transmissions[bi]) * kwargs['seds'][li] / zp1
-                    eff_fluxes[li] = np.trapz(
+                    eff_fluxes[li] = np.trapezoid(
                         yvals, wavs) / self._filter_integrals[bi]
                 elif self._observation_types[li] == 'countrate':
                     wavs = np.array(kwargs['sample_wavelengths'][bi])
@@ -538,7 +538,7 @@ class Photometry(Module):
                         wavs, self._band_wavelengths[bi],
                         self._band_areas[bi]) * kwargs['seds'][li] / zp1 / (
                             H_C_ANG_CGS / wavs) / ANG_CGS
-                    eff_fluxes[li] = np.trapz(yvals, wavs)
+                    eff_fluxes[li] = np.trapezoid(yvals, wavs)
                 else:
                     raise RuntimeError('Unknown observation kind.')
             else:

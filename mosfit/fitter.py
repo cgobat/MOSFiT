@@ -14,13 +14,14 @@ from astrocats.catalog.photometry import PHOTOMETRY
 from astrocats.catalog.quantity import QUANTITY
 from astrocats.catalog.realization import REALIZATION
 from astrocats.catalog.source import SOURCE
-from schwimmbad import MPIPool, SerialPool
+from schwimmbad import MPIPool
 from six import string_types
 
 from mosfit.constants import BOL_MAG_BAND_LABEL
 from mosfit.converter import Converter
 from mosfit.fetcher import Fetcher
 from mosfit.printer import Printer
+from mosfit.pool import MOSFiTSerialPool
 from mosfit.samplers.ensembler import Ensembler
 from mosfit.samplers.nester import Nester
 from mosfit.samplers.ultranester import UltraNester
@@ -40,7 +41,7 @@ def get_pool(method=None):
             raise ValueError('ultranest parallises with MPI already')
         return MPIPool()
     except (ImportError, ValueError):
-        return SerialPool()
+        return MOSFiTSerialPool()
 
 def draw_walker(test=True, walkers_pool=[], replace=False, weights=None):
     """Draw a walker from the global model variable."""
@@ -96,7 +97,7 @@ class Fitter(object):
                  wrap_length=100,
                  **kwargs):
         """Initialize `Fitter` class."""
-        self._pool = SerialPool() if pool is None else pool
+        self._pool = pool or MOSFiTSerialPool()
         self._printer = Printer(
             pool=self._pool,
             wrap_length=wrap_length,
