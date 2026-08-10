@@ -8,9 +8,6 @@ from setuptools import find_packages, setup
 with open(os.path.join('mosfit', 'requirements.txt')) as f:
     required = f.read().splitlines()
 
-with open(os.path.join('mosfit', 'dependencies.txt')) as f:
-    dependencies = f.read().splitlines()
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 init_string = open(os.path.join(dir_path, 'mosfit', '__init__.py')).read()
@@ -30,14 +27,8 @@ for root, dirnames, filenames in os.walk('mosfit'):
         matches.append(os.path.join(root, filename))
 
 
-try:
-    import pypandoc
-    with open('README.md', 'r') as f:
-        txt = f.read()
-    txt = re.sub('<[^<]+>', '', txt)
-    long_description = pypandoc.convert(txt, 'rst', 'md')
-except ImportError:
-    long_description = open('README.md').read()
+with open('README.md', 'r', encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='mosfit',
@@ -54,10 +45,10 @@ setup(
     author=__author__,  # noqa
     author_email='guillochon@gmail.com',
     install_requires=required,
-    dependency_links=dependencies,
     url='https://github.com/guillochon/mosfit',
     download_url=(
         'https://github.com/guillochon/mosfit/tarball/' + __version__),  # noqa
+    python_requires='>=3.10',
     keywords=['astronomy', 'fitting', 'monte carlo', 'modeling'],
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -65,7 +56,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Scientific/Engineering :: Physics'
