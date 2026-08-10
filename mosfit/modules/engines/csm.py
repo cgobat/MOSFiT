@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 from astrocats.catalog.source import SOURCE
-from scipy.interpolate import RegularGridInterpolator, interp2d
+from scipy.interpolate import RegularGridInterpolator
 
 from mosfit.constants import AU_CGS, DAY_CGS, M_SUN_CGS
 from mosfit.modules.engines.engine import Engine

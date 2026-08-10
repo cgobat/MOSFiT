@@ -61,8 +61,7 @@ class Ensembler(Sampler):
                 )
             if self._acor and self._aacort > 0:
                 acortimes = '<' if self._aa < self._MAX_ACORC else ''
-                acortimes += str(int(float(self._emi -
-                                              self._ams) / self._actc))
+                acortimes += str(int(float(self._emi - self._ams) / self._actc))
                 modeldict[MODEL.CONVERGENCE].append(
                     {
                         QUANTITY.VALUE: str(acortimes),

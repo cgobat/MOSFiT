@@ -14,7 +14,7 @@ from astrocats.catalog.quantity import QUANTITY
 from mosfit.constants import LOCAL_LIKELIHOOD_FLOOR
 from mosfit.modules.module import Module
 from mosfit.utils import is_number, listify, pretty_num
-from schwimmbad import SerialPool
+from mosfit.pool import MOSFiTSerialPool
 # from scipy.optimize import differential_evolution
 from scipy.optimize import minimize
 
@@ -80,7 +80,7 @@ class Model(object):
         self._model_name = model
         self._parameter_path = parameter_path
         self._output_path = output_path
-        self._pool = SerialPool() if pool is None else pool
+        self._pool = pool or MOSFiTSerialPool()
         self._is_master = pool.is_master() if pool else False
         self._wrap_length = wrap_length
         self._print_trees = print_trees
@@ -1162,7 +1162,7 @@ class Model(object):
                 new_outs = self._modules[task].process(**inputs)
             except Exception:
                 self._printer.prt(
-                    "Failed to execute module `{}'s process().".format(task),
+                    "Failed to execute module `{}`'s process().".format(task),
                     wrapped=True)
                 raise
 
