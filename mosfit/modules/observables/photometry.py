@@ -10,8 +10,17 @@ import numpy as np
 from astropy import constants as c
 from astropy import units as u
 from astropy.io.votable import parse as voparse
-from mosfit.constants import (ANG_CGS, C_CGS, FOUR_PI, H_C_ANG_CGS, MAG_FAC,
-                              MPC_CGS)
+from mosfit.constants import (
+    ANG_CGS,
+    BOL_BAND_INDEX,
+    C_CGS,
+    FOUR_PI,
+    H_C_ANG_CGS,
+    LBOL_SUN_CGS,
+    MAG_FAC,
+    MBOL_SUN_MAG,
+    MPC_CGS,
+)
 from mosfit.modules.module import Module
 from mosfit.utils import get_url_file_handle, listify, open_atomic, syst_syns
 
@@ -19,10 +28,61 @@ from mosfit.utils import get_url_file_handle, listify, open_atomic, syst_syns
 # Important: Only define one ``Module`` class per file.
 
 
+def luminosity_cgs_to_mbol(lum_cgs):
+    """Bolometric luminosity [erg/s] → absolute bolometric magnitude.
+
+    Calibration uses ``MBOL_SUN_MAG`` and ``LBOL_SUN_CGS`` consistent with the
+    model engine luminosity units.
+    """
+    lum_cgs = np.asarray(lum_cgs, dtype=np.float64)
+    out = np.full(np.shape(lum_cgs), np.nan, dtype=np.float64)
+    pos = np.isfinite(lum_cgs) & (lum_cgs > 0.0)
+    out[pos] = (
+        MBOL_SUN_MAG -
+        MAG_FAC * np.log10(lum_cgs[pos] / LBOL_SUN_CGS))
+    return out
+
+
+def _photometry_debug_enabled() -> bool:
+    v = os.environ.get("MOSFIT_PHOTOMETRY_DEBUG", "").strip().lower()
+    return v not in ("", "0", "false", "no", "off")
+
+
+_PHOTOMETRY_DEBUG_PATCH = (
+    "sesn_valid_mask_scatter_magnitudes_onto_dense_observed_rows"
+)
+
+
+def _dense_measurements_aligned(kwargs, shape_model, measurement_key='magnitudes'):
+    """Column same length as model rows: NaN off ``observed``; data on real rows.
+
+    ``AllTimes`` does not emit ``all_magnitudes``; ``kwargs[measurement_key]``
+    is usually the short transient list (N_real) while ``observed`` (N_dense)
+    marks which dense rows have data. Then ``count_nonzero(observed)==N_real``.
+    """
+    col = np.full(int(shape_model[0]), np.nan, dtype=np.float64)
+    mag = kwargs.get(measurement_key)
+    obs = kwargs.get('observed')
+    if mag is None or obs is None:
+        return col
+    mag = np.asarray(mag, dtype=np.float64).ravel()
+    obs = np.asarray(obs, dtype=bool).ravel()
+    if obs.shape[0] != col.shape[0]:
+        return col
+    ind = obs
+    no = int(np.count_nonzero(ind))
+    if no == mag.size:
+        col[ind] = mag
+    return col
+
+
 class Photometry(Module):
     """Band-pass filters."""
 
     FLUX_STD = 3631 * u.Jy.cgs.scale / u.Angstrom.cgs.scale * C_CGS
+
+    _debug_banner_printed = False
+    _debug_invalid_mask_logged = False
 
     def __init__(self, **kwargs):
         """Initialize module."""
@@ -433,6 +493,16 @@ class Photometry(Module):
 
     def process(self, **kwargs):
         """Process module."""
+        if _photometry_debug_enabled() and (not Photometry._debug_banner_printed):
+            Photometry._debug_banner_printed = True
+            print(
+                "[MOSFIT_PHOTOMETRY_DEBUG] OK — patch {!r}".format(
+                    _PHOTOMETRY_DEBUG_PATCH),
+                flush=True)
+            print(
+                "    photometry.py: {}".format(
+                    os.path.abspath(__file__)),
+                flush=True)
         self.preprocess(**kwargs)
         kwargs = self.prepare_input(self.key('luminosities'), **kwargs)
         self._band_indices = kwargs['all_band_indices']
@@ -450,6 +520,8 @@ class Photometry(Module):
         model_observations = np.zeros_like(self._luminosities)
         for li, lum in enumerate(self._luminosities):
             bi = self._band_indices[li]
+            if bi == BOL_BAND_INDEX:
+                continue
             if bi >= 0:
                 if (self._observation_types[li] == 'magnitude' or
                         self._observation_types[li] == 'magcount'):
@@ -472,21 +544,38 @@ class Photometry(Module):
             else:
                 eff_fluxes[li] = kwargs['seds'][li][0] / ANG_CGS * (
                     C_CGS / (self._frequencies[li] ** 2))
-        nbs = np.logical_or(
-            self._observation_types == 'countrate',
-            self._observation_types == 'fluxdensity')
-        ybs = np.logical_or(
-            self._observation_types == 'magnitude',
-            self._observation_types == 'magcount')
+        bi_arr = np.asarray(self._band_indices)
+        phot_band = bi_arr >= 0
+        nbs = np.logical_and(
+            phot_band,
+            self._observation_types != 'luminosity',
+            np.logical_or(
+                self._observation_types == 'countrate',
+                self._observation_types == 'fluxdensity'))
+        ybs = np.logical_and(
+            phot_band,
+            self._observation_types != 'luminosity',
+            np.logical_or(
+                self._observation_types == 'magnitude',
+                self._observation_types == 'magcount'))
         cbs = self._observation_types == 'magcount'
 
+        lum_mask = self._observation_types == 'luminosity'
 
         model_observations[nbs] = eff_fluxes[nbs] / self._dist_const
         model_observations[ybs] = self.abmag(eff_fluxes[ybs], offsets[ybs])
         model_observations[cbs] = 10.0 ** (-0.4 * (model_observations[
             cbs] - self._zps[cbs]))
+        lumo_dense = np.asarray(self._luminosities, dtype=np.float64)
+        model_observations[lum_mask] = lumo_dense[lum_mask]
+        mbol_fit_mask = np.logical_and(
+            bi_arr == BOL_BAND_INDEX,
+            self._observation_types == 'magnitude')
+        if np.any(mbol_fit_mask):
+            model_observations[mbol_fit_mask] = luminosity_cgs_to_mbol(
+                lumo_dense[mbol_fit_mask])
 
-        # Get the per-point mask from Sampson, if present
+        # Get the per-point mask from SESNSedona, if present
         valid_mask = kwargs.get("sesn_valid_mask") 
         '''
         print(f"DEBUG photometry: sesn_valid_mask present = {valid_mask is not None}")
@@ -498,13 +587,65 @@ class Photometry(Module):
             valid_mask = np.asarray(valid_mask, dtype=bool)
         
         if not np.all(valid_mask):
-            model_observations[~valid_mask] = self._observed[~valid_mask]
+            filled = 0
+            obs = kwargs.get('observed')
+            n_obs = (int(np.sum(np.asarray(obs, dtype=bool)))
+                     if obs is not None else -1)
+            m_short = kwargs.get('magnitudes')
+            short_n = (int(np.asarray(m_short).size) if m_short is not None
+                       else -1)
+            ali = kwargs.get('all_magnitudes')
+            if ali is not None and (
+                    np.asarray(ali).shape == model_observations.shape):
+                m_arr = np.asarray(ali, dtype=np.float64)
+            else:
+                m_arr = _dense_measurements_aligned(
+                    kwargs, model_observations.shape, 'magnitudes')
+            shape_ok = m_arr.shape == model_observations.shape and np.any(
+                np.isfinite(m_arr))
+            if shape_ok:
+                sel = (~valid_mask) & np.isfinite(m_arr)
+                model_observations[sel] = m_arr[sel]
+                filled = int(np.sum(sel))
+            if _photometry_debug_enabled() and (
+                    not Photometry._debug_invalid_mask_logged):
+                Photometry._debug_invalid_mask_logged = True
+                n_inv = int(np.sum(~valid_mask))
+                n_inv_obs = -1
+                if obs is not None:
+                    obs_b = np.asarray(obs, dtype=bool).ravel()
+                    if obs_b.shape == valid_mask.shape:
+                        n_inv_obs = int(np.sum((~valid_mask) & obs_b))
+                print(
+                    "[MOSFIT_PHOTOMETRY_DEBUG] sesn_valid_mask substitution "
+                    "(one-time): n_invalid_dense={} n_invalid_at_observed_rows={} "
+                    "n_substituted_using_catalog_mag={} scatter_ok={}  "
+                    "n_dense={} sum(observed)={} len(magnitudes_short)={}".format(
+                        n_inv,
+                        n_inv_obs,
+                        filled,
+                        bool(shape_ok and filled > 0),
+                        int(model_observations.size), n_obs, short_n),
+                    flush=True,
+                )
+                if not shape_ok or filled == 0:
+                    print(
+                        "    model_obs {}, all_magnitudes {}".format(
+                            np.shape(model_observations),
+                            None if ali is None else np.shape(ali)),
+                        flush=True,
+                    )
 
-        return {
+        out = {
             'model_observations': model_observations,
             # forward mask so outputs can see it
             'valid_mask': valid_mask,
         }
+        preset_mag = kwargs.get('emulator_preset_systematic_mag')
+        if preset_mag is not None:
+            out['emulator_preset_systematic_mag'] = np.asarray(
+                preset_mag, dtype=np.float64)
+        return out
 
     def average_wavelengths(self, indices=None):
         """Return average wavelengths for specified band indices."""

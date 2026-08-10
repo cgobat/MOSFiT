@@ -22,6 +22,15 @@
                 "u_countrate":"optional",
                 "e_upper_countrate":["optional", "numeric"],
                 "e_lower_countrate":["optional", "numeric"],
+                "luminosity":["optional", "numeric"],
+                "e_luminosity":["optional", "numeric"],
+                "e_upper_luminosity":["optional", "numeric"],
+                "e_lower_luminosity":["optional", "numeric"],
+                "u_luminosity":"optional",
+                "mbol":["optional", "numeric"],
+                "e_mbol":["optional", "numeric"],
+                "e_upper_mbol":["optional", "numeric"],
+                "e_lower_mbol":["optional", "numeric"],
                 "telescope":"optional",
                 "instrument":"optional",
                 "bandset":"optional",
@@ -109,20 +118,6 @@
         "class":"variance",
         "latex":"\\sigma"
     },
-    "codeltatime":{
-        "kind":"parameter",
-        "value":-1.0,
-        "class":"covariance",
-        "fixed":true,
-        "latex":"l_t"
-    },
-    "codeltalambda":{
-        "kind":"parameter",
-        "value":-1.0,
-        "class":"covariance",
-        "fixed":true,
-        "latex":"l_\\lambda"
-    },
     "rvhost":{
         "kind":"parameter",
         "value":3.1,
@@ -137,8 +132,6 @@
         "inputs":[
             "transient",
             "variance",
-            "codeltatime",
-            "codeltalambda",
             "photometry",
             "default_upper_limit_error",
             "default_no_error_bar_error"
@@ -185,69 +178,12 @@
             "resttimes"
         ]
     },
-    "oakernel":{
-        "kind":"array",
-        "inputs":[
-            "transient",
-            "variance",
-            "codeltatime",
-            "codeltalambda",
-            "photometry",
-            "default_upper_limit_error",
-            "default_no_error_bar_error"
-        ],
-        "requests":{
-            "average_wavelengths": "photometry",
-            "variance_bands": "photometry"
-        },
-        "type":"oa",
-        "class":"kernel"
-    },
-    "aokernel":{
-        "kind":"array",
-        "inputs":[
-            "transient",
-            "variance",
-            "codeltatime",
-            "codeltalambda",
-            "photometry",
-            "default_upper_limit_error",
-            "default_no_error_bar_error"
-        ],
-        "requests":{
-            "average_wavelengths": "photometry",
-            "variance_bands": "photometry"
-        },
-        "type":"ao",
-        "class":"kernel"
-    },
-    "fullkernel":{
-        "kind":"array",
-        "inputs":[
-            "transient",
-            "variance",
-            "codeltatime",
-            "codeltalambda",
-            "photometry",
-            "default_upper_limit_error",
-            "default_no_error_bar_error"
-        ],
-        "requests":{
-            "average_wavelengths": "photometry",
-            "variance_bands": "photometry"
-        },
-        "type":"full",
-        "class":"kernel"
-    },
     "fitlc":{
         "kind":"output",
         "inputs":[
             "transient",
             "photometry",
             "fitkernel",
-            "oakernel",
-            "aokernel",
-            "fullkernel",
             "diagonal"
         ],
         "class":"lightcurve"

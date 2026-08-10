@@ -1,7 +1,7 @@
 {
     "starmass":{
-        "kind": "parameter",
-        "value": 1,
+        "kind":"parameter",
+        "value":1,
         "class":"kroupa"
     },
     "ebv":{
@@ -21,7 +21,7 @@
     },
     "nhhost":{
         "kind":"parameter",
-        "value":1.0e21,
+        "value":1e+21,
         "class":"parameter",
         "latex":"n_{\\rm H,host}",
         "derived_keys":"avhost"
@@ -34,7 +34,7 @@
     },
     "b":{
         "kind":"parameter",
-        "value": 0.98,
+        "value":0.98,
         "class":"parameter",
         "latex":"b\\ (\\rm scaled\\ \\beta)",
         "derived_keys":"beta"
@@ -53,7 +53,7 @@
     },
     "bhmass":{
         "kind":"parameter",
-        "value":1.78e7,
+        "value":17800000.0,
         "class":"parameter",
         "latex":"M_{h} (M_{\\odot})"
     },
@@ -61,13 +61,13 @@
         "kind":"parameter",
         "value":6.31,
         "class":"parameter",
-        "latex": "R_{\\rm ph0}"
+        "latex":"R_{\\rm ph0}"
     },
     "lphoto":{
-        "kind": "parameter",
-        "value": 1.5,
-        "class": "parameter",
-        "latex": "\\rm photosphere\\ \\rm  exponent\\ 'l' "
+        "kind":"parameter",
+        "value":1.5,
+        "class":"parameter",
+        "latex":"\\rm photosphere\\ \\rm  exponent\\ 'l' "
     },
     "Leddlim":{
         "kind":"parameter",
@@ -81,14 +81,14 @@
         "value":1,
         "class":"parameter",
         "fixed":true,
-        "latex": "\\rm R_{phot} \\ max, \\relativistic \\ wind \\ (boolean)"
+        "latex":"\\rm R_{phot} \\ max, \\relativistic \\ wind \\ (boolean)"
     },
     "vphotmaxwind":{
         "kind":"parameter",
         "value":0.5,
         "class":"parameter",
         "fixed":true,
-        "latex": "v_{\\rm phot \\ max} (\\rm fraction \\ of \\ c)"
+        "latex":"v_{\\rm phot \\ max} (\\rm fraction \\ of \\ c)"
     },
     "fallback":{
         "kind":"engine",
@@ -128,7 +128,7 @@
             "tde_photosphere"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "losextinction":{
@@ -140,7 +140,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "photometry":{
@@ -148,6 +148,12 @@
         "inputs":[
             "losextinction",
             "lumdist"
+        ],
+        "supports":[
+            "ultraviolet",
+            "optical",
+            "infrared",
+            "bolometric"
         ]
     },
     "tde_constraints":{

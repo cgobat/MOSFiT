@@ -6,7 +6,6 @@ import codecs
 import datetime
 import json
 import os
-import re
 import sys
 import time
 from builtins import input, str
@@ -14,10 +13,8 @@ from collections import OrderedDict
 from textwrap import fill
 
 import numpy as np
-from scipy import ndimage
 
-from .utils import (calculate_WAIC, congrid, is_integer, is_number,
-                    open_atomic, pretty_num, rebin)
+from .utils import calculate_WAIC, is_integer, is_number, pretty_num
 
 if sys.version_info[:2] < (3, 3):
     old_print = print  # noqa
@@ -68,13 +65,12 @@ class Printer(object):
         }
 
     def __init__(self, pool=None, wrap_length=100, quiet=False, fitter=None,
-                 language='en', exit_on_prompt=False):
+                 exit_on_prompt=False):
         """Initialize printer, setting wrap length."""
         self._wrap_length = wrap_length
         self._quiet = quiet
         self._pool = pool
         self._fitter = fitter
-        self._language = language
         self._exit_on_prompt = exit_on_prompt
 
         self._was_inline = False
@@ -121,41 +117,7 @@ class Printer(object):
         with codecs.open(os.path.join(
                 dir_path, 'strings.json'), encoding='utf-8') as f:
             strings = json.load(f, object_pairs_hook=OrderedDict)
-        if self._language == 'en':
-            self._strings = strings
-            return
-        lsf = os.path.join(dir_path, 'strings-' + self._language + '.json')
-        if os.path.isfile(lsf):
-            with open(lsf) as f:
-                self._strings = json.load(f)
-            if set(self._strings.keys()) == set(strings):
-                return
-
-        try:
-            from googletrans import Translator  # noqa
-        except Exception:
-            self.prt(
-                'The `--language` option requires the `Googletrans` package. '
-                'Please install with `pip install googletrans`.', wrapped=True)
-            self._strings = strings
-            pass
-        else:
-            self.prt(self.translate(
-                'Translating strings for language `{}`, please wait '
-                '(this is only done once)...\n'
-                .format(self._language)), wrapped=True)
-            self._strings = OrderedDict()
-            for ki, key in enumerate(strings):
-                self.prt('[ {}% ]'.format(pretty_num(
-                    100.0 * ki / len(strings), sig=3)),
-                         inline=True)
-                self._strings[key] = self.translate(strings[key])
-            with open_atomic(lsf, 'w') as f:
-                json.dump(self._strings, f)
-
-    def set_language(self, language):
-        """Set language."""
-        self._language = language
+        self._strings = strings
 
     def colorify(self, text):
         """Add colors to text."""
@@ -255,7 +217,7 @@ class Printer(object):
     def prompt(self, text, reps=[],
                wrap_length=None, kind='bool', default=None,
                none_string='None of the above.', colorify=True, single=False,
-               options=None, translate=True, message=True, color='',
+               options=None, message=True, color='',
                allow_blank=True):
         """Prompt the user for input and return a value based on response."""
         if wrap_length and is_integer(wrap_length):
@@ -333,9 +295,7 @@ class Printer(object):
             if message and text in self._strings:
                 text = self.message(text, reps=reps, prt=False)
             textchoices = text + choices
-            if translate:
-                textchoices = self.translate(textchoices)
-            prompt_txt = (textchoices).split('\n')
+            prompt_txt = textchoices.split('\n')
             for txt in prompt_txt[:-1]:
                 ptxt = fill(txt, wl, replace_whitespace=False)
                 self.prt(ptxt, color=color)
@@ -566,27 +526,6 @@ class Printer(object):
         outarr.extend(messages)
 
         kmat_extra = 0
-        if kmat is not None and kmat.shape[0] > 1:
-            smat = ndimage.filters.gaussian_filter(
-                kmat, 0.1 * len(kmat) / 7.0, mode='nearest', truncate=2.0)
-            try:
-                kmat_scaled = congrid(smat, (14, 7), minusone=True,
-                                      bounds_error=True)
-            except Exception:
-                kmat_scaled = rebin(smat, (14, 7))
-            kmat_scaled = np.log(kmat_scaled)
-            kmat_scaled /= np.max(kmat_scaled) - np.min(kmat_scaled)
-            kmat_pers = [np.percentile(kmat_scaled, x) for x in (20, 50, 80)]
-            kmat_dimi = range(len(kmat_scaled))
-            kmat_dimj = range(len(kmat_scaled[0]))
-            doodle = '\n╔' + ('═' * len(kmat_scaled)) + '╗   \n'
-            doodle += '║' + '║   \n║'.join(
-                [''.join([self.ascii_fill(kmat_scaled[i, j], kmat_pers)
-                          for i in kmat_dimi]) for j in kmat_dimj]) + '║'
-            doodle += '\n╚' + ('═' * len(kmat_scaled)) + '╝   '
-            doodle = doodle.splitlines()
-
-            kmat_extra = len(doodle[-1])
 
         line = ''
         lines = ''
@@ -602,17 +541,6 @@ class Printer(object):
 
         lines = lines + '\n' + line
 
-        if kmat is not None and kmat.shape[0] > 1:
-            lines = self._lines(lines)
-            loff = int(np.floor((len(kmat_scaled[0]) - len(lines)) / 2.0)) + 2
-            for li, line in enumerate(doodle):
-                if li < loff:
-                    continue
-                elif li > loff + len(lines) - 1:
-                    break
-                doodle[li] += lines[li - loff]
-            lines = '\n'.join(doodle)
-
         self.prt(lines, colorify=True, inline=not make_space)
         sys.stdout.flush()
         if make_space:
@@ -626,27 +554,6 @@ class Printer(object):
         """
         td = str(datetime.timedelta(seconds=int(round(t))))
         return (self._strings['estimated_time'] + ': [ ' + td + ' ]')
-
-    def translate(self, text):
-        """Translate text to another language."""
-        if self._language != 'en':
-            try:
-                from googletrans import Translator
-                translator = Translator()
-                ttext, reps = self.rep_ansi(text)
-                ttext = translator.translate(ttext, dest=self._language).text
-                text = ttext.format(*reps)
-            except Exception:
-                pass
-        return text
-
-    def rep_ansi(self, text):
-        """Replace ANSI codes and return the list of codes."""
-        patt = re.compile(r'({})'.format(
-            '|'.join(['\{.*?\}'] + list(self.ansi.codes.keys()))))
-        stext = patt.sub("{}", text)
-        matches = patt.findall(text)
-        return stext, matches
 
     def tree(self, my_tree):
         """Pretty print the module dependency trees for each root."""
@@ -681,17 +588,6 @@ class Printer(object):
                             '├', '└') for ci, x in enumerate(line)])
             tree_str = '\n'.join(lines)
             self.prt(tree_str)
-
-    def ascii_fill(self, value, pers):
-        """Print a character based on range from 0 - 1."""
-        if np.isnan(value) or value < pers[0]:
-            return ' '
-        if np.isnan(value) or value < pers[1]:
-            return '.'
-        elif value < pers[2]:
-            return '*'
-        else:
-            return '#'
 
     def supports_color(self):
         """Return if current terminal supports color or not."""

@@ -2,7 +2,7 @@
 MOSFiT
 ======
 
-Welcome to the documentation for MOSFiT (The Modular Open Source Fitter for Transients), a Python 2.7/3.x package for fitting, sharing, and estimating the parameters of transients via user-contributed transient models.
+Welcome to the documentation for MOSFiT (The Modular Open Source Fitter for Transients), a Python 3 package for fitting and estimating the parameters of astronomical transients via user-contributed models.
 
 Please see the links below for information on how to install and run the package.
 
@@ -40,6 +40,6 @@ Indices and tables
 License & Attribution
 ---------------------
 
-Copyright 2016-2018, `James Guillochon <mailto:guillochon@gmail.com>`_, Matt Nicholl, and contributors.
+Copyright 2016-2026, `James Guillochon <mailto:guillochon@gmail.com>`_, Matt Nicholl, and contributors.
 
 The source code is made available under the terms of the MIT license.

@@ -1,10 +1,10 @@
 {
     "@references":[
         {
-            "bibcode": "2017arXiv170708132V"
+            "bibcode":"2017arXiv170708132V"
         },
         {
-            "bibcode": "2017arXiv171011576V"
+            "bibcode":"2017arXiv171011576V"
         }
     ],
     "ebv":{
@@ -24,7 +24,7 @@
     },
     "nhhost":{
         "kind":"parameter",
-        "value":1.0e14,
+        "value":100000000000000.0,
         "class":"parameter",
         "latex":"n_{\\rm H,host}",
         "derived_keys":"avhost"
@@ -35,7 +35,7 @@
         "class":"parameter",
         "latex":"t_{\\rm exp}\\,{\\rm (days)}",
         "requests":{
-            "min_times": "transient"
+            "min_times":"transient"
         }
     },
     "temperature_red":{
@@ -100,19 +100,19 @@
     },
     "vejecta_blue":{
         "kind":"parameter",
-        "value":1.0e5,
+        "value":100000.0,
         "class":"parameter",
         "latex":"v_{\\rm ejb}\\,({\\rm km\\,s}^{-1})"
     },
     "vejecta_red":{
         "kind":"parameter",
-        "value":1.0e5,
+        "value":100000.0,
         "class":"parameter",
         "latex":"v_{\\rm ejr}\\,({\\rm km\\,s}^{-1})"
     },
     "vejecta_purple":{
         "kind":"parameter",
-        "value":1.0e5,
+        "value":100000.0,
         "class":"parameter",
         "latex":"v_{\\rm ejp}\\,({\\rm km\\,s}^{-1})"
     },
@@ -158,7 +158,7 @@
             "diffusion"
         ],
         "replacements":{
-            "luminosities": "luminosities_blue",
+            "luminosities":"luminosities_blue",
             "vejecta":"vejecta_blue",
             "mejecta":"mejecta_blue",
             "kappa":"kappa_blue",
@@ -174,7 +174,7 @@
             "temperature_floor"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         },
         "replacements":{
             "luminosities":"luminosities_blue"
@@ -224,7 +224,7 @@
             "diffusion2"
         ],
         "replacements":{
-            "luminosities": "luminosities_red",
+            "luminosities":"luminosities_red",
             "vejecta":"vejecta_red",
             "mejecta":"mejecta_red",
             "kappa":"kappa_red",
@@ -242,7 +242,7 @@
             "blackbody"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         },
         "replacements":{
             "luminosities":"luminosities_red"
@@ -292,7 +292,7 @@
             "diffusion3"
         ],
         "replacements":{
-            "luminosities": "luminosities_purple",
+            "luminosities":"luminosities_purple",
             "vejecta":"vejecta_purple",
             "mejecta":"mejecta_purple",
             "kappa":"kappa_purple",
@@ -310,7 +310,7 @@
             "blackbody2"
         ],
         "requests":{
-            "band_wave_ranges": "photometry",
+            "band_wave_ranges":"photometry",
             "seds":"blackbody2"
         },
         "replacements":{
@@ -326,7 +326,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         },
         "replacements":{
             "luminosities":"luminosities_purple"
@@ -337,7 +337,8 @@
         "supports":[
             "ultraviolet",
             "optical",
-            "infrared"
+            "infrared",
+            "bolometric"
         ],
         "inputs":[
             "lumdist",

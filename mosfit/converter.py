@@ -45,7 +45,7 @@ class Converter(object):
     _FALSE_VALS = ['f', 'false', 'F', 'False', '0', 'n', 'N']
     _EMPTY_VALS = ['nodata']
 
-    def __init__(self, printer, require_source=False, guess=True, cache_path='',
+    def __init__(self, printer, guess=True, cache_path='',
                 **kwargs):
         """Initialize."""
         import pickle
@@ -60,7 +60,6 @@ class Converter(object):
         self._inflect = inflect.engine()
         self._printer = printer
         self._guess = guess
-        self._require_source = require_source
 
         self._estrs = [
             'err', '_err', 'err_', 'ERR', 'e_', '_e', '(err)', 'error',
@@ -773,20 +772,15 @@ class Converter(object):
                                     sopts = [('Bibcode', 'b'), ('DOI', 'd'),
                                              ('ArXiv ID', 'a'),
                                              ('Last name', 'l')]
-                                    if self._require_source:
-                                        sel_str = 'must_select_source'
-                                    else:
-                                        sel_str = 'select_source'
-                                    text = prt.text(sel_str)
+                                    text = prt.text('select_source')
                                     skind = prt.prompt(
                                         text,
                                         kind='option',
                                         options=sopts,
                                         default='b',
-                                        none_string=(None if
-                                                     self._require_source else
-                                                     ('None of the above, '
-                                                      'tag MOSFiT as source')))
+                                        none_string=(
+                                            'None of the above, '
+                                            'tag MOSFiT as source'))
                                     if skind == 'b':
                                         rsource = OrderedDict()
                                         bibcode = ''

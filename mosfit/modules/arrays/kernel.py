@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from mosfit.constants import ANG_CGS, C_CGS
+from mosfit.constants import ANG_CGS, BOL_BAND_INDEX, C_CGS
 from mosfit.modules.arrays.array import Array
 
 # Important: Only define one ``Module`` class per file.
@@ -17,9 +17,6 @@ class Kernel(Array):
         """Initialize module."""
         super(Kernel, self).__init__(**kwargs)
         self._times = np.array([])
-        self._codeltatime = -1
-        self._codeltalambda = -1
-        self._type = kwargs.get('type', False)
 
     def process(self, **kwargs):
         """Process module."""
@@ -27,26 +24,16 @@ class Kernel(Array):
 
         ret = {}
 
-        # If we are trying to krig between observations, we need an array with
-        # dimensions equal to the number of intermediate observations.
-        if self._type == 'full':
-            kskey = 'kfmat'
-        elif self._type == 'oa':
-            kskey = 'koamat'
-        elif self._type == 'ao':
-            kskey = 'kaomat'
-        else:
-            kskey = 'kmat'
-
         # Get band variances
         self._variance = kwargs.get(self.key('variance'), 0.0)
 
         # Get array of real observations.
         self._observations = np.array([
             ct if (t == 'countrate' or t == 'magcount') else y if
-            (t == 'magnitude') else fd if t == 'fluxdensity' else None
-            for y, ct, fd, t in zip(self._mags, self._cts, self._fds,
-                                    self._o_otypes)
+            (t == 'magnitude') else lum if t == 'luminosity' else fd if
+            t == 'fluxdensity' else None
+            for y, ct, fd, lum, t in zip(
+                self._mags, self._cts, self._fds, self._lums, self._o_otypes)
         ])
 
         # Get array of model observations.
@@ -81,32 +68,8 @@ class Kernel(Array):
 
         self._o_band_vs = self._band_vs[self._observed]
 
-        if self._type == 'full':
-            self._band_vs_1 = self._band_vs
-            self._band_vs_2 = self._band_vs
-        elif self._type == 'oa':
-            self._band_vs_1 = self._o_band_vs
-            self._band_vs_2 = self._band_vs
-        elif self._type == 'ao':
-            self._band_vs_1 = self._band_vs
-            self._band_vs_2 = self._o_band_vs
-        else:
-            self._band_vs_1 = self._o_band_vs
-            self._band_vs_2 = self._o_band_vs
-
-        if self._codeltatime >= 0 or self._codeltalambda >= 0:
-            kmat = np.outer(self._band_vs_1, self._band_vs_2)
-
-            if self._codeltatime >= 0:
-                kmat *= np.exp(self._dt2mat / self._codeltatime**2)
-
-            if self._codeltalambda >= 0:
-                kmat *= np.exp(self._dl2mat / self._codeltalambda**2)
-
-            ret[kskey] = kmat
-        else:
-            ret['abandvs'] = self._band_vs
-            ret['obandvs'] = self._o_band_vs
+        ret['abandvs'] = self._band_vs
+        ret['obandvs'] = self._o_band_vs
 
         return ret
 
@@ -118,8 +81,6 @@ class Kernel(Array):
     def preprocess(self, **kwargs):
         """Construct kernel distance arrays."""
         new_times = np.array(kwargs.get('all_times', []), dtype=float)
-        self._codeltatime = kwargs.get(self.key('codeltatime'), -1)
-        self._codeltalambda = kwargs.get(self.key('codeltalambda'), -1)
         if np.array_equiv(new_times, self._times) and self._preprocessed:
             return
         self._times = new_times
@@ -129,52 +90,26 @@ class Kernel(Array):
         self._mags = np.array(kwargs.get('magnitudes', []))
         self._fds = np.array(kwargs.get('fluxdensities', []))
         self._cts = np.array(kwargs.get('countrates', []))
+        self._lums = np.array(kwargs.get('observed_luminosities', []))
         self._u_freqs = kwargs.get('all_u_frequencies', [])
+        ai = np.asarray(self._all_band_indices)
         self._waves = np.array([
             self._average_wavelengths[bi]
-            if bi >= 0 else C_CGS / self._freqs[i] / ANG_CGS
-            for i, bi in enumerate(self._all_band_indices)
+            if bi >= 0 else (
+                np.nan if bi == BOL_BAND_INDEX else
+                C_CGS / self._freqs[i] / ANG_CGS)
+            for i, bi in enumerate(ai)
         ])
         self._observed = np.array(kwargs.get('observed', []), dtype=bool)
-        self._observation_types = kwargs.get('observation_types')
+        self._observation_types = np.asarray(kwargs.get('observation_types'))
         self._n_obs = len(self._observed)
-        self._count_inds = np.asarray(self._observation_types) != 'magnitude'
+        self._count_inds = np.logical_and(
+            self._observation_types != 'magnitude',
+            self._observation_types != 'luminosity'
+            )
 
         self._o_times = self._times[self._observed]
         self._o_waves = self._waves[self._observed]
         self._o_otypes = self._observation_types[self._observed]
-
-        if self._type == 'full':
-            self._times_1 = self._times
-            self._times_2 = self._times
-            self._waves_1 = self._waves
-            self._waves_2 = self._waves
-        elif self._type == 'oa':
-            self._times_1 = self._o_times
-            self._times_2 = self._times
-            self._waves_1 = self._o_waves
-            self._waves_2 = self._waves
-        elif self._type == 'ao':
-            self._times_1 = self._times
-            self._times_2 = self._o_times
-            self._waves_1 = self._waves
-            self._waves_2 = self._o_waves
-        else:
-            self._times_1 = self._o_times
-            self._times_2 = self._o_times
-            self._waves_1 = self._o_waves
-            self._waves_2 = self._o_waves
-
-        # Time deltas (radial distance) for covariance matrix.
-        if self._codeltatime >= 0:
-            self._dt2mat = self._times_1[:, None] - self._times_2[None, :]
-            self._dt2mat **= 2
-            self._dt2mat *= -0.5
-
-        # Wavelength deltas (radial distance) for covariance matrix.
-        if self._codeltalambda >= 0:
-            self._dl2mat = self._waves_1[:, None] - self._waves_2[None, :]
-            self._dl2mat **= 2
-            self._dl2mat *= -0.5
 
         self._preprocessed = True

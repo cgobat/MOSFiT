@@ -116,12 +116,16 @@ class LOSExtinction(SED):
                 pass
 
         # Units of `seds` is ergs / s / Angstrom.
-        return {
+        ret = {
             'sample_wavelengths': self._sample_wavelengths,
             self.key('seds'): self._seds,
             self.key('avhost'): av_host,
             'sesn_valid_mask': kwargs.get('sesn_valid_mask'),  # ← forward it
         }
+        ps = kwargs.get('emulator_preset_systematic_mag')
+        if ps is not None:
+            ret['emulator_preset_systematic_mag'] = ps
+        return ret
 
     def preprocess(self, **kwargs):
         """Preprocess module."""

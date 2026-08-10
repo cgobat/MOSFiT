@@ -12,7 +12,7 @@ from astrocats.catalog.quantity import QUANTITY
 from emcee.autocorr import AutocorrError
 from mosfit.mossampler import MOSSampler
 from mosfit.samplers.sampler import Sampler
-from mosfit.utils import calculate_WAIC, pretty_num
+from mosfit.utils import calculate_WAIC
 
 
 class Ensembler(Sampler):
@@ -41,7 +41,6 @@ class Ensembler(Sampler):
         self._fracking = fracking
         self._frack_step = frack_step
 
-        self._upload_model = None
         self._WAIC = None
 
     def append_output(self, modeldict):
@@ -73,19 +72,8 @@ class Ensembler(Sampler):
                 )
             modeldict[MODEL.STEPS] = str(self._emi)
 
-    def prepare_output(self, check_upload_quality, upload):
-        """Prepare output for writing to disk and uploading."""
-        prt = self._printer
-
-        if check_upload_quality:
-            if self._WAIC is None:
-                self._upload_model = False
-            elif self._WAIC is not None and self._WAIC < 0.0:
-                if upload:
-                    prt.message('no_ul_waic', ['' if self._WAIC is None
-                                               else pretty_num(self._WAIC)])
-                self._upload_model = False
-
+    def prepare_output(self):
+        """Prepare samples for writing."""
         if len(self._all_chain):
             self._pout = self._all_chain[:, :, -1, :]
             self._lnprobout = self._all_lnprob[:, :, -1]
@@ -233,12 +221,10 @@ class Ensembler(Sampler):
         tft = 0.0  # Total self._fracking time
         sli = 1.0  # Keep track of how many times chain halved
         s_exception = None
-        kmat = None
         ages = np.zeros((self._ntemps, self._nwalkers), dtype=int)
         oldp = self._p
 
         max_chunk = 1000
-        kmat_chunk = 5
         iter_chunks = int(np.ceil(float(self._iterations) / max_chunk))
         iter_arr = [max_chunk if xi < iter_chunks - 1 else
                     self._iterations - max_chunk * (iter_chunks - 1)
@@ -441,25 +427,12 @@ class Ensembler(Sampler):
                                  self._emi % self._frack_step == 0)
 
                     self._scores = [np.array(x) for x in self._lnprob]
-                    if emim1 % kmat_chunk == 0:
-                        sout = self._model.run_stack(
-                            self._p[np.unravel_index(
-                                np.argmax(self._lnprob), self._lnprob.shape)],
-                            root='objective')
-                        kmat = sout.get('kmat')
-                        kdiag = sout.get('kdiagonal')
-                        variance = sout.get('obandvs', sout.get('variance'))
-                        if kdiag is not None and kmat is not None:
-                            kmat[np.diag_indices_from(kmat)] += kdiag
-                        elif kdiag is not None and kmat is None:
-                            kmat = np.diag(kdiag + variance)
                     prt.status(
                         self,
                         desc='fracking' if frack_now else
                         ('burning' if self._emi < self._burn_in
                          else 'walking'),
                         scores=self._scores,
-                        kmat=kmat,
                         accepts=accepts,
                         iterations=[self._emi, None if
                                     self._cc is not None else
@@ -522,7 +495,6 @@ class Ensembler(Sampler):
                         self,
                         desc='fracking_results',
                         scores=self._scores,
-                        kmat=kmat,
                         fracking=True,
                         iterations=[self._emi, None if
                                     self._cc is not None else

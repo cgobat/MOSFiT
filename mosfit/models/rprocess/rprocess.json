@@ -10,7 +10,7 @@
     },
     "nhhost":{
         "kind":"parameter",
-        "value":1.0e18,
+        "value":1e+18,
         "class":"parameter",
         "latex":"n_{\\rm H,host}",
         "derived_keys":"avhost"
@@ -21,7 +21,7 @@
         "class":"parameter",
         "latex":"t_{\\rm exp}\\,{\\rm (days)}",
         "requests":{
-            "min_times": "transient"
+            "min_times":"transient"
         }
     },
     "temperature":{
@@ -50,13 +50,13 @@
     },
     "mejecta":{
         "kind":"parameter",
-        "value":1.0e-3,
+        "value":0.001,
         "class":"parameter",
         "latex":"M_{\\rm ej}\\,(M_\\odot)"
     },
     "vejecta":{
         "kind":"parameter",
-        "value":3.0e4,
+        "value":30000.0,
         "class":"parameter",
         "latex":"v_{\\rm ej}\\,({\\rm km\\,s}^{-1})"
     },
@@ -96,7 +96,7 @@
             "temperature_floor"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "losextinction":{
@@ -108,7 +108,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "photometry":{
@@ -116,7 +116,8 @@
         "supports":[
             "ultraviolet",
             "optical",
-            "infrared"
+            "infrared",
+            "bolometric"
         ],
         "inputs":[
             "losextinction",

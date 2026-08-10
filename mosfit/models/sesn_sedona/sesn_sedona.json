@@ -35,13 +35,13 @@
     },
     "min_vel":{
         "kind":"parameter",
-        "value":1.5E2,
+        "value":1.5,
         "class":"parameter",
         "latex":"\\rm vel_{\\rm min},({\\rm 100 km\\,s}^{-1})"
     },
     "del_vel":{
         "kind":"parameter",
-        "value":8.0E3,
+        "value":8.0E1,
         "class":"parameter",
         "latex":"\\Delta~{\\rm vel},({\\rm 100 km\\,s}^{-1})"
     },
@@ -88,9 +88,9 @@
             "texplosion"
         ]
     },
-    "sampson":{
+    "sesn_sedona":{
         "kind":"sed",
-        "class":"Sampson",
+        "class":"sesn_sedona",
         "inputs":[
             "densetimes",
             "eta_vel",
@@ -113,7 +113,7 @@
     "losextinction":{
         "kind":"sed",
         "inputs":[
-            "sampson",
+            "sesn_sedona",
             "nhhost",
             "rvhost",
             "ebv"

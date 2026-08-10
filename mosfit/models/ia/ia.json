@@ -16,7 +16,7 @@
     },
     "nhhost":{
         "kind":"parameter",
-        "value":1.0e18,
+        "value":1e+18,
         "class":"parameter",
         "latex":"n_{\\rm H,host}",
         "derived_keys":"avhost"
@@ -27,12 +27,12 @@
         "class":"parameter",
         "latex":"t_{\\rm exp}\\,{\\rm (days)}",
         "requests":{
-            "min_times": "transient"
+            "min_times":"transient"
         }
     },
     "temperature":{
         "kind":"parameter",
-        "value":1.0e4,
+        "value":10000.0,
         "class":"parameter",
         "latex":"T_{\\min}\\,{\\rm (K)}"
     },
@@ -56,7 +56,7 @@
     },
     "vejecta":{
         "kind":"parameter",
-        "value":1.0e4,
+        "value":10000.0,
         "class":"parameter",
         "latex":"v_{\\rm ej}\\,({\\rm km\\,s}^{-1})"
     },
@@ -68,7 +68,7 @@
     },
     "line_wavelength":{
         "kind":"parameter",
-        "value":7.5e3,
+        "value":7500.0,
         "class":"parameter",
         "latex":"g_{\\lambda}"
     },
@@ -133,7 +133,7 @@
             "cutoff_wavelength"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "line":{
@@ -148,7 +148,7 @@
             "line_amplitude"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "ia_constraints":{
@@ -168,7 +168,7 @@
             "ebv"
         ],
         "requests":{
-            "band_wave_ranges": "photometry"
+            "band_wave_ranges":"photometry"
         }
     },
     "photometry":{
@@ -176,7 +176,8 @@
         "supports":[
             "ultraviolet",
             "optical",
-            "infrared"
+            "infrared",
+            "bolometric"
         ],
         "inputs":[
             "losextinction",

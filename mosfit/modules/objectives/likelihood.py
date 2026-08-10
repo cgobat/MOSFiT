@@ -2,13 +2,28 @@
 from math import isnan
 
 import numpy as np
-from scipy import linalg as spla
 
 from mosfit.constants import LIKELIHOOD_FLOOR
 from mosfit.modules.module import Module
 
 
 # Important: Only define one ``Module`` class per file.
+
+
+def _sesn_valid_mask_on_residual_stream(kwargs, residual_n):
+    """``valid_mask`` is dense like ``observed``; diagonal uses ``mask[observed]``."""
+    vm = kwargs.get('valid_mask', None)
+    obs = kwargs.get('observed', None)
+    if vm is None or obs is None:
+        return None
+    vm = np.asarray(vm, dtype=bool)
+    obs = np.asarray(obs, dtype=bool)
+    if vm.shape != obs.shape:
+        return None
+    vp = vm[obs].ravel()
+    if vp.size != int(residual_n):
+        return None
+    return vp
 
 
 class Likelihood(Module):
@@ -33,28 +48,50 @@ class Likelihood(Module):
         if not self._fractions:
             return ret
 
-        # Model predictions and upper-limit flags
-        self._model_observations = np.asarray(kwargs['model_observations'])
+        model_full = np.asarray(kwargs['model_observations'])
         self._score_modifier = kwargs.get(self.key('score_modifier'), 0.0)
-        self._upper_limits = np.asarray(kwargs.get('upperlimits', []), dtype=bool)
 
-        # NEW: per-point validity mask from upstream (Sampson→Photometry)
-        valid_mask = kwargs.get('valid_mask')
+        dense_ul = np.array(kwargs.get('upperlimits', []), dtype=bool)
+        dense_observed = kwargs.get('observed', None)
+        if dense_observed is not None:
+            dense_observed = np.asarray(dense_observed, dtype=bool)
+        dense_vm = kwargs.get('valid_mask', None)
+        if dense_vm is not None:
+            dense_vm = np.asarray(dense_vm, dtype=bool)
+            if dense_vm.shape != model_full.shape:
+                dense_vm = None
 
-
-        if valid_mask is not None:
-            #print("DEBUG Likelihood: N_used =", np.count_nonzero(valid_mask))
-            valid_mask = np.asarray(valid_mask, dtype=bool)
-            if valid_mask.shape != self._model_observations.shape:
-                # shape mismatch: ignore mask
-                valid_mask = None
-            # Strict: if no valid points, give a very bad finite score.
-            elif not np.any(valid_mask):
-                return ret
+        value = ret['value']
 
         # Basic sanity on fractions
         if min(self._fractions) < 0.0 or max(self._fractions) > 1.0:
             return ret
+
+        if dense_observed is None or dense_observed.shape != model_full.shape:
+            use_dense = np.ones_like(model_full, dtype=bool)
+        elif dense_vm is None:
+            use_dense = dense_observed
+        else:
+            use_dense = dense_observed & dense_vm
+            if not np.any(use_dense):
+                return ret
+
+        for ii in np.flatnonzero(use_dense):
+            md = float(model_full[ii])
+            ul = dense_ul[ii] if ii < dense_ul.size else False
+            if (not ul) and (isnan(md) or not np.isfinite(md)):
+                return ret
+
+        if dense_observed is not None and dense_observed.shape == model_full.shape:
+            self._upper_limits = dense_ul[dense_observed]
+        else:
+            self._upper_limits = dense_ul
+
+        self._model_observations = (
+            model_full[dense_observed]
+            if dense_observed is not None
+            and dense_observed.shape == model_full.shape
+            else model_full)
 
         # Covariance diagonal and residuals (1D arrays aligned with data)
         diag = kwargs.get('kdiagonal', None)
@@ -66,94 +103,47 @@ class Likelihood(Module):
         diag = np.asarray(diag)
         residuals = np.asarray(residuals)
 
-        # Apply mask to diag and residuals as well
-        if valid_mask is not None:
-            # Apply mask to model_obs and upper_limits
-            self._model_observations = self._model_observations[valid_mask]
-            diag = diag[valid_mask]
-            residuals = residuals[valid_mask]
-            if self._upper_limits.size:
-                self._upper_limits = self._upper_limits[valid_mask]
+        valid_mask_residual = _sesn_valid_mask_on_residual_stream(
+            kwargs, residuals.size)
 
-        if self._upper_limits.size:
-            finite_mask = self._upper_limits | np.isfinite(self._model_observations)
-        else:
-            finite_mask = np.isfinite(self._model_observations)
-        if not np.all(finite_mask):
+        if not np.any(diag.shape) or not np.any(residuals.shape):
             return ret
 
-        value = ret["value"]
+        # Evaluate only the diagonal Gaussian likelihood.
+        if 'obandvs' not in kwargs:
+            return ret
+        self._o_band_vs = np.asarray(kwargs['obandvs'])
 
-        # Full covariance matrix case
-        if kwargs.get('kmat') is not None:
-            kmat = np.asarray(kwargs['kmat'])
+        vp = valid_mask_residual
+        if vp is not None:
+            if not np.any(vp):
+                return ret
+            n_vp = int(vp.shape[0])
+            if not (diag.shape[0] == n_vp and residuals.shape[0] == n_vp
+                    and self._o_band_vs.shape[0] == n_vp):
+                return ret
+            self._o_band_vs = self._o_band_vs[vp]
+            diag = diag[vp]
+            residuals = residuals[vp]
+            if self._upper_limits.shape[0] == n_vp:
+                self._upper_limits = self._upper_limits[vp]
+        elif dense_vm is not None:
+            if dense_vm.shape == self._o_band_vs.shape:
+                self._o_band_vs = self._o_band_vs[dense_vm]
+            if dense_vm.shape == diag.shape:
+                diag = diag[dense_vm]
+                residuals = residuals[dense_vm]
+                if dense_ul.shape[0] == dense_vm.shape[0]:
+                    self._upper_limits = dense_ul[dense_vm]
 
-            # Apply mask to the covariance matrix: select rows/cols
-            if valid_mask is not None:
-                kmat = kmat[np.ix_(valid_mask, valid_mask)]
+        var = self._o_band_vs ** 2 + diag
+        var = np.maximum(var, Likelihood.MIN_COV_TERM)
+        value = -0.5 * np.sum(
+            residuals ** 2 / var + np.log(2.0 * np.pi * var)
+        )
 
-            # Add observed errors to diagonal
-            kmat[np.diag_indices_from(kmat)] += diag
-
-            if self._use_cpu is not True and self._model._fitter._cuda:
-                try:
-                    import pycuda.gpuarray as gpuarray
-                    import skcuda.linalg as skla
-                except ImportError:
-                    self._use_cpu = True
-                    if not self._cuda_reported:
-                        self._printer.message(
-                            'cuda_not_enabled',
-                            master_only=True,
-                            warning=True
-                        )
-                else:
-                    self._use_cpu = False
-                    if not self._cuda_reported:
-                        self._printer.message('cuda_enabled', master_only=True)
-                        self._cuda_reported = True
-
-                    kmat_gpu = gpuarray.to_gpu(kmat)
-                    skla.cholesky(kmat_gpu, lib='cusolver')
-                    value = -np.log(skla.det(kmat_gpu, lib='cusolver'))
-                    res_gpu = gpuarray.to_gpu(residuals.reshape(
-                        len(residuals), 1))
-                    cho_mat_gpu = res_gpu.copy()
-                    skla.cho_solve(kmat_gpu, cho_mat_gpu, lib='cusolver')
-                    value -= 0.5 * (
-                        skla.mdot(skla.transpose(res_gpu),
-                                  cho_mat_gpu).get())[0][0]
-
-            if self._use_cpu:
-                try:
-                    chol_kmat = spla.cholesky(kmat, lower=False, check_finite=False)
-                    value = -np.sum(np.log(np.diag(chol_kmat)))
-                    solved = spla.cho_solve(
-                        (chol_kmat, False), residuals, check_finite=False
-                    )
-                    value -= 0.5 * np.dot(residuals, solved)
-                except spla.LinAlgError:
-                    return ret
-
-            ret['kdiagonal'] = diag
-            ret['kresiduals'] = residuals
-
-        elif 'kfmat' in kwargs:
-            raise RuntimeError('Should not have kfmat in likelihood!')
-
-        else:
-            # Shortcut when matrix is diagonal.
-            self._o_band_vs = np.asarray(kwargs['obandvs'])
-
-            # Apply mask to variances as well
-            if valid_mask is not None:
-                self._o_band_vs = self._o_band_vs[valid_mask]
-
-            # diag and residuals already masked above
-            variance_terms = self._o_band_vs**2 + diag
-            value = -0.5 * np.sum(
-                residuals**2 / variance_terms + np.log(variance_terms)
-            )
+        ret['kdiagonal'] = diag
+        ret['kresiduals'] = residuals
 
         score = self._score_modifier + value
         if isnan(score) or not np.isfinite(score):

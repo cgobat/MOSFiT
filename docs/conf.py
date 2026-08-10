@@ -21,12 +21,10 @@
 from datetime import datetime as dt
 import os
 import re
-
-import sphinx_rtd_theme
+import sys
 
 # Hack to get sphinxcontrib.autoprogram working.
 try:
-    import sys
     import types
     import sphinx.util
     import docutils.parsers.rst
@@ -68,6 +66,13 @@ extensions = [
     'sphinx_automodapi.automodapi', 'sphinx_automodapi.smart_resolver',
     'sphinx.ext.coverage', 'sphinxcontrib.autoprogram', 'numpydoc.numpydoc',
     'sphinx.ext.autosectionlabel'
+]
+
+# Heavy / optional deps: keep autodoc working on Read the Docs without them.
+autodoc_mock_imports = [
+    'torch',
+    'mpi4py',
+    'schwimmbad.mpi',
 ]
 
 intersphinx_mapping = {
@@ -128,8 +133,6 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 autosummary_generate = True
 

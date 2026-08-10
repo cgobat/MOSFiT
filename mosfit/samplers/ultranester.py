@@ -1,7 +1,6 @@
 # -*- coding: UTF-8 -*-
 """Definitions for `UltraNester` class."""
 
-import numpy as np
 from astrocats.catalog.model import MODEL
 from astrocats.catalog.quantity import QUANTITY
 from mosfit.samplers.sampler import Sampler
@@ -28,25 +27,8 @@ class UltraNester(Sampler):
         if num_walkers is not None:
             self._run_kwargs['min_num_live_points'] = num_walkers
 
-        self._upload_model = None
         self._ntemps = 1
         self._nwalkers = self._num_walkers
-
-    def _get_best_kmat(self):
-        """Get the kernel matrix associated with best current scoring model."""
-        max_like_index = np.argmax(self._results['weighted_samples']['logl'])
-        max_like_point = self._results['weighted_samples']['points'][max_like_index, :]
-        sout = self._model.run_stack(max_like_point, root='objective')
-
-        kmat = sout.get('kmat')
-        kdiag = sout.get('kdiagonal')
-        variance = sout.get('obandvs', sout.get('variance'))
-        if kdiag is not None and kmat is not None:
-            kmat[np.diag_indices_from(kmat)] += kdiag
-        elif kdiag is not None and kmat is None:
-            kmat = np.diag(kdiag + variance)
-
-        return kmat
 
     def append_output(self, modeldict):
         """Append output from the nester to the model description."""
@@ -57,14 +39,11 @@ class UltraNester(Sampler):
         }
         modeldict[MODEL.STEPS] = str(self._niter)
 
-    def prepare_output(self, check_upload_quality, upload):
-        """Prepare output for writing to disk and uploading."""
+    def prepare_output(self):
+        """Prepare nested samples for writing."""
         self._pout = [self._results['weighted_samples']['points']]
         self._lnprobout = [self._results['weighted_samples']['logl']]
         self._weights = [self._results['weighted_samples']['weights']]
-
-        if check_upload_quality:
-            pass
 
     def run(self, walker_data):
         """Use nested sampling to determine posteriors."""

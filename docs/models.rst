@@ -47,6 +47,14 @@ List of built-in models
 +--------------+---------------------------------------+-------------------------------------------------------------------------------+
 | ``slsn``     | Magnetar + modified SED + constraints | `2017ApJ...850...55N <http://adsabs.harvard.edu/abs/2017ApJ...850...55N>`_    |
 +--------------+---------------------------------------+-------------------------------------------------------------------------------+
+| ``slsnni``   | Magnetar + NiCo decay                 | See ``slsn`` & ``default``                                                   |
++--------------+---------------------------------------+-------------------------------------------------------------------------------+
+| ``shockni``  | Shock cooling + NiCo decay            | Moore et al., in preparation                                                |
++--------------+---------------------------------------+-------------------------------------------------------------------------------+
+| ``fallback`` | Fallback accretion engine             |                                                                               |
++--------------+---------------------------------------+-------------------------------------------------------------------------------+
+| ``sesn_sedona`` | SESN with SEDONA SED emulator      | `Yadavalli et al. 2026 <https://iopscience.iop.org/article/10.3847/1538-4357/ae32f8/meta>`_ |
++--------------+---------------------------------------+-------------------------------------------------------------------------------+
 | ``tde``      | Tidal disruption events               | `2018arXiv180108221M <http://adsabs.harvard.edu/abs/2018arXiv180108221M>`_    |
 +--------------+---------------------------------------+-------------------------------------------------------------------------------+
 
@@ -117,7 +125,7 @@ Now, change the range of allowed neutron star masses to something else:
         },
     }
 
-**Congratulations!** You have just modified your first MOSFiT model. It should be noted that even this very minor change, which affects the range of a single parameter, would generate a completely different model hash than the default model, distinguishing it from any other models that might have been uploaded by other users using the default settings.
+**Congratulations!** You have just modified your first MOSFiT model. Even a small prior change yields a distinct model fingerprint from the bundled default—which is desirable when you version or publish fits so others can verify which physics setup was run.
 
 You can also use more complex priors within the same file. For example:
 
@@ -286,18 +294,18 @@ Creating a new model
 If users would like to create a brand new model for the ``MOSFiT`` platform, it is easiest to duplicate one of the existing models that most closely resembles
 the model they wish to create.
 
-If you go this route, we highly recommend that you `fork MOSFiT <https://github.com/guillochon/MOSFiT#fork-destination-box>`_ on GitHub and clone your fork, with development being done in the cloned ``mosfit`` directory:
+If you go this route, we highly recommend that you `fork MOSFiT <https://github.com/guillochon/MOSFiT#fork-destination-box>`_ on GitHub and clone your fork, with development being done in the cloned repository:
 
 .. code-block:: bash
 
     git clone https://github.com/your_github_username/MOSFiT.git
-    cd mosfit
+    cd MOSFiT
 
 Copy one of the existing models as a starting point:
 
 .. code-block:: bash
 
-    cp -R models/slsn models/my_model_that_explains_everything
+    cp -R mosfit/models/slsn mosfit/models/my_model_that_explains_everything
 
 
 Inside this directory are two files: a ``model_name.json`` file and a ``parameters.json`` file. We must edit both files to run our new model.
@@ -313,19 +321,19 @@ First, the ``model_name.json`` file should be edited to include your model's:
 
 Optionally, your model file can also include an extinction prescription.
 
-Then, you need to edit the ``parameters.json`` to include the priors on all ofyour model parameters. If no prior is specified, the variable will be set to a constant.
+Then, you need to edit the ``parameters.json`` to include the priors on all of your model parameters. If no prior is specified, the variable will be set to a constant.
 
 You can invoke the model using:
 
 .. code-block:: bash
 
-    python -m my_model_that_explains_everything
+    mosfit -m my_model_that_explains_everything
 
 
 If your model requires a new engine, you can create this engine by again copying an existing engine:
 
 .. code-block:: bash
 
-	cp modules/engines/nickelcobalt.py my_new_engine.py
+	cp mosfit/modules/engines/nickelcobalt.py mosfit/modules/engines/my_new_engine.py
 
 Then plug this engine into your model's json file.

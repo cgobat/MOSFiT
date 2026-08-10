@@ -14,11 +14,10 @@ GitHub.
 Setting up MOSFiT with Anaconda
 -------------------------------
 
-**Platforms:** MacOS X, Linux, and Windows
+**Platforms:** macOS, Linux, and Windows
 
-We recommend using the `Anaconda <http://continuum.io/downloads.html>`__ Python
-distribution from Continuum Analytics (or the related Miniconda distribution)
-as your Python environment.
+We recommend using the `Anaconda <https://www.anaconda.com/download>`__ or
+Miniconda Python distribution as your Python environment.
 
 After installing conda, ``MOSFiT`` can be installed via:
 
@@ -32,7 +31,7 @@ After installing conda, ``MOSFiT`` can be installed via:
 Installing with pip
 -------------------
 
-**Platforms:** MacOS X, Linux, and Windows
+**Platforms:** macOS, Linux, and Windows
 
 Installing ``MOSFiT`` with pip is straightforward:
 
@@ -46,12 +45,12 @@ Installing ``MOSFiT`` with pip is straightforward:
 Installing from source
 ----------------------
 
-**Platforms:** MacOS X, Linux, and Windows
+**Platforms:** macOS, Linux, and Windows
 
-If you are interested in performing more serious development work, it is probably best to install ``MOSFiT`` from source. This can be done by cloning the repository and then running the ``setup.py`` script:
+For development work, clone the repository and install in editable mode:
 
 .. code-block:: bash
 
     git clone https://github.com/guillochon/MOSFiT.git
     cd MOSFiT
-    python setup.py install
+    pip install -e .

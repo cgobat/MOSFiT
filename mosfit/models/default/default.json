@@ -116,7 +116,8 @@
         "supports":[
             "ultraviolet",
             "optical",
-            "infrared"
+            "infrared",
+            "bolometric"
         ],
         "inputs":[
             "losextinction",

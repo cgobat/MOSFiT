@@ -177,6 +177,8 @@ class Model(object):
                         self._model[tag])
                 del self._model[tag]
 
+        self._overlay_transient_photometry_schema_from_pkg(basic_model_path)
+
         # with open(os.path.join(
         #         self.get_products_path(),
         #         self._model_name + '.json'), 'w') as f:
@@ -307,6 +309,35 @@ class Model(object):
     def get_products_path(self):
         """Get path to products."""
         return os.path.join(self._output_path, self.MODEL_PRODUCTS_DIR)
+
+    def _overlay_transient_photometry_schema_from_pkg(self, cwd_basic_model_path):
+        """Fill missing transient photometry subkeys when cwd ``model.json`` is stale.
+
+        Launch-time folder copy may install an older ``models/model.json`` that
+        lacks ``luminosity``, etc.; merge optional keys from the package base.
+        """
+        pkg_basic = os.path.join(self._dir_path, 'models', 'model.json')
+        if not os.path.isfile(pkg_basic):
+            return
+        if os.path.normpath(os.path.abspath(pkg_basic)) == os.path.normpath(
+                os.path.abspath(cwd_basic_model_path)):
+            return
+        try:
+            with open(pkg_basic, 'r') as f:
+                pkg = json.load(f, object_pairs_hook=OrderedDict)
+        except Exception:
+            return
+        ref = pkg.get(
+            'transient', {}).get('keys', {}).get('photometry')
+        if not isinstance(ref, dict):
+            return
+        tgt_ph = (
+            self._model.setdefault(
+                'transient', OrderedDict()).setdefault(
+                    'keys', OrderedDict()).setdefault(
+                        'photometry', OrderedDict()))
+        for pk, pv in ref.items():
+            tgt_ph.setdefault(pk, pv)
 
     def _load_task_module(self, task, call_stack=None):
         if not call_stack:
@@ -479,43 +510,51 @@ class Model(object):
         if self._pool.is_master() and 'photometry' in self._modules:
             prt.message('bands_used')
             bis = list(
-                filter(lambda a: a != -1,
+                filter(lambda a: a >= 0,
                        sorted(set(outputs['all_band_indices']))))
-            ois = []
-            for bi in bis:
-                ois.append(
-                    any([
-                        y
-                        for x, y in zip(outputs['all_band_indices'], outputs[
-                            'observed']) if x == bi
-                    ]))
-            band_len = max([
-                len(self._modules['photometry']._unique_bands[bi][
-                    'origin']) for bi in bis
-            ])
-            filts = self._modules['photometry']
-            ubs = filts._unique_bands
-            filterarr = [(ubs[bis[i]]['systems'], ubs[bis[i]]['bandsets'],
-                          filts._average_wavelengths[bis[i]],
-                          filts._band_offsets[bis[i]],
-                          filts._band_kinds[bis[i]],
-                          filts._band_names[bis[i]],
-                          ois[i], bis[i])
-                         for i in range(len(bis))]
-            filterrows = [(
-                ' ' + (' ' if s[-2] else '*') + ubs[s[-1]]['origin']
-                .ljust(band_len) + ' [' + ', '.join(
-                    list(
-                        filter(None, (
-                            'Bandset: ' + s[1] if s[1] else '',
-                            'System: ' + s[0] if s[0] else '',
-                            'AB offset: ' + pretty_num(
-                                s[3]) if (s[4] == 'magnitude' and
-                                          s[0] != 'AB') else '')))) +
-                ']').replace(' []', '') for s in list(sorted(filterarr))]
-            if not all(ois):
-                filterrows.append(prt.text('not_observed'))
-            prt.prt('\n'.join(filterrows))
+            if bis:
+                ois = []
+                for bi in bis:
+                    ois.append(
+                        any([
+                            y
+                            for x, y in zip(
+                                outputs['all_band_indices'],
+                                outputs['observed']) if x == bi
+                        ]))
+                band_len = max([
+                    len(self._modules['photometry']._unique_bands[bi][
+                        'origin']) for bi in bis
+                ])
+                filts = self._modules['photometry']
+                ubs = filts._unique_bands
+                filterarr = [
+                    (ubs[bis[i]]['systems'], ubs[bis[i]]['bandsets'],
+                     filts._average_wavelengths[bis[i]],
+                     filts._band_offsets[bis[i]],
+                     filts._band_kinds[bis[i]],
+                     filts._band_names[bis[i]],
+                     ois[i], bis[i])
+                    for i in range(len(bis))]
+                filterrows = [(
+                    ' ' + (' ' if s[-2] else '*') + ubs[s[-1]]['origin']
+                    .ljust(band_len) + ' [' + ', '.join(
+                        list(
+                            filter(None, (
+                                'Bandset: ' + s[1] if s[1] else '',
+                                'System: ' + s[0] if s[0] else '',
+                                'AB offset: ' + pretty_num(
+                                    s[3]) if (s[4] == 'magnitude' and
+                                              s[0] != 'AB') else '')))) +
+                    ']').replace(' []', '') for s in list(sorted(filterarr))]
+                if not all(ois):
+                    filterrows.append(prt.text('not_observed'))
+                prt.prt('\n'.join(filterrows))
+            else:
+                prt.prt(
+                    '  (No optical/IR filter bands in this transient; fitting '
+                    'bolometric luminosity or M_bol and/or radio points does '
+                    'not load SVO bands.)')
 
             single_freq_inst = list(
                 sorted(set(np.array(outputs['instruments'])[

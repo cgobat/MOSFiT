@@ -78,7 +78,7 @@
         "class":"parameter",
         "latex":"m_{\\rm op}"
     },
-    "sampson":{
+    "sesn_sedona":{
         "kind":"sed",
         "inputs":[
             "densetimes",
@@ -101,7 +101,7 @@
     "losextinction":{
         "kind":"sed",
         "inputs":[
-            "sampson",
+            "sesn_sedona",
             "nhhost",
             "rvhost",
             "ebv"
