@@ -52,9 +52,14 @@ jobs:
           DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          repo="${DOCKERHUB_IMAGE:-${DOCKERHUB_USERNAME}/mosfit}"
-          sha="${GITHUB_SHA::12}"
-          echo "tags=${repo}:latest,${repo}:${sha}" >> "$GITHUB_OUTPUT"
+          if [ "$PUBLISH" = "true" ]; then
+            repo="${DOCKERHUB_IMAGE:-${DOCKERHUB_USERNAME}/mosfit}"
+            echo "tags=${repo}:latest,${repo}:${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          else
+            # Build-only (branches / PRs, no push): a valid local tag is enough,
+            # and this doesn't depend on any secrets/vars being set.
+            echo "tags=mosfit:ci" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and push
         uses: docker/build-push-action@v6
