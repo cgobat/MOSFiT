@@ -1,10 +1,10 @@
 name: Build and push MOSFiT image
 
-# Builds the MOSFiT CPU runtime image and pushes it to Docker Hub, from which the
-# CVMFS unpacked sync (opened by a separate PR against
-# opensciencegrid/cvmfs-singularity-sync) mirrors it to
-# /cvmfs/singularity.opensciencegrid.org/<user>/mosfit:<tag>. PRs build without
-# pushing, so a broken image fails the check.
+# Builds the MOSFiT CPU runtime image. The image is pushed to Docker Hub ONLY
+# from main (and version tags); pushes to any other branch and pull requests just
+# build, so a broken image fails the check without publishing. From Docker Hub the
+# CVMFS unpacked sync (a separate PR against opensciencegrid/cvmfs-singularity-sync)
+# mirrors it to /cvmfs/singularity.opensciencegrid.org/<user>/mosfit:<tag>.
 #
 # Needs repo secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN. MOSFiT is CPU-only
 # (emcee/dynesty), so there is no GPU variant.
@@ -29,13 +29,16 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Publish only from main and version tags; every other ref builds only.
+    env:
+      PUBLISH: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -58,7 +61,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ env.PUBLISH == 'true' }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
