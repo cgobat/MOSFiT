@@ -17,6 +17,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # source install so the resolver can't pull numpy 2.
 RUN pip install --no-cache-dir "numpy>=1.23,<=1.26.4" "pandas>=2.1,<3"
 
+# torch (CPU build). This fork imports every SED module at package import, and
+# sesn_sedona imports torch, so it is required just to `import mosfit` — even
+# though it isn't in MOSFiT's requirements.txt. CPU-only keeps the image lean.
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+# schwimmbad==0.3.0 (a MOSFiT pin) ships a legacy sdist whose setup.py imports
+# `six` at build time, which pip's build isolation excludes -> build fails. Put
+# the build deps (six + setuptools/wheel) in the env and build schwimmbad without
+# isolation before the source install.
+RUN pip install --no-cache-dir six setuptools wheel \
+    && pip install --no-cache-dir --no-build-isolation schwimmbad==0.3.0
+
 # Install MOSFiT from this repo (the offline-fetcher fork). Pure Python — no
 # Cython extensions are compiled.
 COPY . /opt/mosfit
