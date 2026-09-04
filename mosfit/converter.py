@@ -53,10 +53,19 @@ class Converter(object):
         self._cache_path = cache_path
         if self._cache_path:
             self._path = cache_path
-            if not os.path.isdir(os.path.join(self._path,'cache')):
-                os.makedirs(os.path.join(self._path,'cache'))
         else:
-            self._path = os.path.dirname(os.path.realpath(__file__))
+            # Default to the package dir, but fall back to a writable location when
+            # it is read-only (e.g. an installed/containerized MOSFiT).
+            pkg_dir = os.path.dirname(os.path.realpath(__file__))
+            override = os.environ.get('MOSFIT_CACHE_DIR')
+            if override:
+                self._path = override
+            elif os.access(pkg_dir, os.W_OK):
+                self._path = pkg_dir
+            else:
+                self._path = os.path.join(os.path.expanduser('~'), '.mosfit')
+        if not os.path.isdir(os.path.join(self._path, 'cache')):
+            os.makedirs(os.path.join(self._path, 'cache'))
         self._inflect = inflect.engine()
         self._printer = printer
         self._guess = guess
