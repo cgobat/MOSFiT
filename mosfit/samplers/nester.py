@@ -60,7 +60,7 @@ class Nester(Sampler):
         """Use nested sampling to determine posteriors."""
         from dynesty import DynamicNestedSampler
         from dynesty.dynamicsampler import stopping_function, weight_function
-        from mosfit.fitter import ln_likelihood, draw_from_icdf
+        from mosfit.fitter import ln_likelihood, draw_from_icdf, pool_queue_size
 
         prt = self._printer
 
@@ -98,7 +98,7 @@ class Nester(Sampler):
             sampler = DynamicNestedSampler(
                 ln_likelihood, draw_from_icdf, ndim,
                 pool=self._pool, sample='rwalk',
-                queue_size=max(self._pool.size, 1))
+                queue_size=pool_queue_size(self._pool))
             # Perform initial sample.
             ncall = sampler.ncall
             self._niter = sampler.it - 1
@@ -126,10 +126,6 @@ class Nester(Sampler):
                     prt.message('exceeded_walltime', warning=True)
                     break
 
-                self._results = sampler.results
-
-                scales.append(sampler.results.scale)
-
                 self._e_logz = np.sqrt(logzvar)
                 prt.status(
                     self, 'baseline',
@@ -140,6 +136,10 @@ class Nester(Sampler):
                     loglstar=[loglstar],
                     time_running=self.time_running(),
                     maximum_walltime=self._fitter._maximum_walltime)
+
+            self._results = sampler.results
+            if getattr(self._results, 'scale', None) is not None:
+                scales.append(self._results.scale)
 
             if max_iter >= 0:
                 prt.status(
@@ -185,8 +185,6 @@ class Nester(Sampler):
                         ncall += nc
                         self._niter += 1
                         max_iter -= 1
-
-                        self._results = sampler.results
 
                         prt.status(
                             self, 'batching',

@@ -84,8 +84,3 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["mosfit"]
-
-# astrocats 0.5.0 (astrocatalogs/astrocats#95) is not on PyPI yet.
-# Drop this source once 0.5.0 is published; the specifier above is enough.
-[tool.uv.sources]
-astrocats = { git = "https://github.com/astrocatalogs/astrocats", branch = "python-3.14-uv" }
