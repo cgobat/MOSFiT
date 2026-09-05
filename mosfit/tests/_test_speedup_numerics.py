@@ -460,10 +460,31 @@ def test_fallback_golden():
     print('Fallback engine matches golden draws')
 
 
-def test_viscous_matches_interp1d():
-    """np.interp + cached nodes match the previous interp1d viscous integral."""
-    from scipy.interpolate import interp1d
+def _viscous_quadrature(dense_t, dense_l, times, tvisc, tb, t_end):
+    """Previous 1000-point trapezoid on log-spaced nodes (physics baseline)."""
     from mosfit.modules.transforms.viscous import Viscous
+
+    times = np.asarray(times, dtype=float)
+    uniq_times = np.unique(times[(times >= tb) & (times <= t_end)])
+    lu = len(uniq_times)
+    num = int(Viscous.N_INT_TIMES / 2.0)
+    lsp = np.logspace(
+        np.log10(tvisc / t_end) + Viscous.MIN_LOG_SPACING, 0, num)
+    xm = np.unique(np.concatenate((lsp, 1 - lsp)))
+    int_times = np.clip(
+        tb + (uniq_times.reshape(lu, 1) - tb) * xm, tb, t_end)
+    int_lums = np.interp(int_times, dense_t, dense_l)
+    int_args = int_lums * np.exp(
+        (int_times - int_times[:, -1].reshape(lu, 1)) / tvisc)
+    int_args[np.isnan(int_args)] = 0.0
+    uniq_lums = np.trapezoid(int_args, int_times) / tvisc
+    return uniq_lums[np.searchsorted(uniq_times, times)]
+
+
+def test_viscous_matches_interp1d():
+    """Exponential recurrence matches analytic kernel and old quadrature."""
+    from mosfit.modules.transforms.viscous import Viscous, viscous_exp_filter
+    from mosfit.modules.transforms.transform import Transform
 
     rest_t = 10.0
     dense = np.unique(np.concatenate((
@@ -487,35 +508,47 @@ def test_viscous_matches_interp1d():
     out2 = v.process(**kwargs)
     np.testing.assert_allclose(y, out2['dense_luminosities'], rtol=0, atol=0)
 
-    # Independent replica of the old SciPy path.
-    from mosfit.modules.transforms.transform import Transform
     Transform.process(v, **kwargs)
     dense_t = np.asarray(v._dense_times_since_exp, dtype=float)
     dense_l = np.asarray(v._dense_luminosities, dtype=float)
-    min_te = min(v._dense_times_since_exp)
+    min_te = float(np.min(dense_t))
     tb = max(0.0, min_te)
-    linterp = interp1d(dense_t, dense_l, copy=False, assume_sorted=True)
-    uniq_times = np.unique(v._times_to_process[
-        (v._times_to_process >= tb) & (v._times_to_process <= dense_t[-1])])
-    lu = len(uniq_times)
-    num = int(Viscous.N_INT_TIMES / 2.0)
-    lsp = np.logspace(
-        np.log10(tvisc / dense_t[-1]) + Viscous.MIN_LOG_SPACING, 0, num)
-    xm = np.unique(np.concatenate((lsp, 1 - lsp)))
-    int_times = np.clip(
-        tb + (uniq_times.reshape(lu, 1) - tb) * xm, tb, dense_t[-1])
-    int_lums = linterp(int_times)
-    int_args = int_lums * np.exp(
-        (int_times - int_times[:, -1].reshape(lu, 1)) / tvisc)
-    int_args[np.isnan(int_args)] = 0.0
-    uniq_lums = np.trapezoid(int_args, int_times) / tvisc
-    ref = uniq_lums[np.searchsorted(uniq_times, v._times_to_process)]
-    np.testing.assert_allclose(y, ref, rtol=1e-12, atol=0)
-    np.testing.assert_allclose(float(np.sum(y)), 1.5364061218711165e+44,
-                               rtol=1e-12)
-    np.testing.assert_allclose(float(np.max(y)), 6.41980422636273e+42,
-                               rtol=1e-12)
-    print('Viscous np.interp matches interp1d quadrature')
+    t_end = float(dense_t[-1])
+    times = np.asarray(v._times_to_process, dtype=float)
+
+    y_py = viscous_exp_filter.py_func(
+        dense_t, dense_l, np.unique(times[(times >= tb) & (times <= t_end)]),
+        tvisc, tb, t_end)
+    y_jit = viscous_exp_filter(
+        dense_t, dense_l, np.unique(times[(times >= tb) & (times <= t_end)]),
+        tvisc, tb, t_end)
+    np.testing.assert_allclose(y_jit, y_py, rtol=1e-12, atol=0)
+
+    quad = _viscous_quadrature(dense_t, dense_l, times, tvisc, tb, t_end)
+    scale = np.maximum(np.abs(quad), 1e-30)
+    rel = np.abs(y - quad) / scale
+    max_rel = float(np.max(rel))
+    print('Viscous recurrence vs 1000-pt quadrature max rel', max_rel)
+    np.testing.assert_allclose(y, quad, rtol=3e-4, atol=0)
+
+    for tau in (1.0e-3, 0.075, 1.0, 100.0):
+        kwargs['Tviscous'] = tau
+        y_tau = np.asarray(v.process(**kwargs)['dense_luminosities'])
+        q_tau = _viscous_quadrature(dense_t, dense_l, times, tau, tb, t_end)
+        rel_tau = float(np.max(np.abs(y_tau - q_tau) /
+                               np.maximum(np.abs(q_tau), 1e-30)))
+        print('Viscous recurrence vs quadrature tau', tau, 'max rel', rel_tau)
+        np.testing.assert_allclose(y_tau, q_tau, rtol=1e-3, atol=0)
+
+    # Constant L: L_out(t) = L0 (1 - exp(-(t-tb)/τ)).
+    L0 = 1.0e42
+    t_grid = np.linspace(0.0, 40.0, 81)
+    L_const = np.full_like(t_grid, L0)
+    tau = 4.0
+    y_const = viscous_exp_filter(t_grid, L_const, t_grid, tau, 0.0, t_grid[-1])
+    analytic = L0 * (1.0 - np.exp(-t_grid / tau))
+    np.testing.assert_allclose(y_const, analytic, rtol=1e-12, atol=1e-6 * L0)
+    print('Viscous exponential recurrence matches serial formula')
 
 
 if __name__ == '__main__':

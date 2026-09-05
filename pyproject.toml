@@ -36,6 +36,7 @@ dependencies = [
     "inflect>=1.0.0",
     "matplotlib>=3.0.0",
     "nbstripout>=0.2.9",
+    "numba>=0.67.0",
     "numexpr>=2.6.1",
     "numpy>=2.3",
     "pandas>=2.2",
