@@ -74,6 +74,8 @@ def test_blackbody_matches_serial():
     }
     out = bb.process(**kwargs)
     seds = out[bb.key('seds')]
+    assert getattr(seds, 'ndim', 0) == 2
+    assert seds.dtype != object
 
     xc = bb.X_CONST
     fc = bb.FLUX_CONST
@@ -83,7 +85,7 @@ def test_blackbody_matches_serial():
     for li in range(n):
         bii = bi[li]
         if bii == BOL_BAND_INDEX:
-            ref.append(np.zeros(1))
+            ref.append(np.zeros(n_wav))
             continue
         if lum[li] == 0.0:
             ref.append(np.zeros(n_wav))

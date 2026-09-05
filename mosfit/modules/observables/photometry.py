@@ -28,6 +28,25 @@ from mosfit.utils import get_url_file_handle, listify, open_atomic, syst_syns
 # Important: Only define one ``Module`` class per file.
 
 
+def _sed_block(seds_in, idx):
+    """Rows ``idx`` of a rectangular or object-dtype SED array."""
+    arr = np.asarray(seds_in)
+    idx = np.asarray(idx)
+    if arr.dtype != object and arr.ndim == 2:
+        return arr[idx]
+    return np.stack([np.asarray(seds_in[int(i)], dtype=float) for i in idx])
+
+
+def _sed_col0(seds_in, idx):
+    """First wavelength sample of rows ``idx`` (radio / single-λ SEDs)."""
+    arr = np.asarray(seds_in)
+    idx = np.asarray(idx)
+    if arr.dtype != object and arr.ndim == 2:
+        return np.asarray(arr[idx, 0], dtype=float)
+    return np.array([float(np.asarray(seds_in[int(i)]).ravel()[0])
+                     for i in idx], dtype=float)
+
+
 def luminosity_cgs_to_mbol(lum_cgs):
     """Bolometric luminosity [erg/s] → absolute bolometric magnitude.
 
@@ -570,7 +589,7 @@ class Photometry(Module):
         freq_rows = (band_indices < 0) & (band_indices != BOL_BAND_INDEX)
         if np.any(freq_rows):
             idx = np.flatnonzero(freq_rows)
-            sed0 = np.array([seds_in[li][0] for li in idx], dtype=float)
+            sed0 = _sed_col0(seds_in, idx)
             eff_fluxes[idx] = sed0 / ANG_CGS * (
                 C_CGS / (frequencies[idx] ** 2))
 
@@ -591,8 +610,7 @@ class Photometry(Module):
                 idx = np.flatnonzero(mag_rows)
                 offsets[idx] = self._band_offsets[bi]
                 trans = self._trans_on_sample[bi]
-                sed_block = np.stack([np.asarray(seds_in[li], dtype=float)
-                                      for li in idx])
+                sed_block = _sed_block(seds_in, idx)
                 yvals = trans * sed_block / zp1
                 eff_fluxes[idx] = np.trapezoid(
                     yvals, wavs, axis=-1) / self._filter_integrals[bi]
@@ -600,8 +618,7 @@ class Photometry(Module):
             if np.any(cr_rows):
                 idx = np.flatnonzero(cr_rows)
                 areas = self._area_on_sample[bi]
-                sed_block = np.stack([np.asarray(seds_in[li], dtype=float)
-                                      for li in idx])
+                sed_block = _sed_block(seds_in, idx)
                 yvals = areas * sed_block / zp1 / (
                     H_C_ANG_CGS / wavs) / ANG_CGS
                 eff_fluxes[idx] = np.trapezoid(yvals, wavs, axis=-1)

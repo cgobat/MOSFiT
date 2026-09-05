@@ -70,7 +70,7 @@ class LOSExtinction(SED):
         #kwargs = self.prepare_input(self.key('luminosities'), **kwargs)
         self.preprocess(**kwargs)
         zp1 = 1.0 + kwargs[self.key('redshift')]
-        self._seds = kwargs[self.key('seds')]
+        self._seds = self.as_rectangular_seds(kwargs[self.key('seds')])
         #print("in losextinction, seds: "+str(self._seds))
         self._nh_host = kwargs[self.key('nhhost')]
         self._rv_host = kwargs[self.key('rvhost')]
@@ -102,15 +102,7 @@ class LOSExtinction(SED):
                              dtype=float)
             idx = np.flatnonzero(band_indices == bi)
             factor = eapp(ext, np.ones_like(ext), inplace=False)
-            sed_block = np.stack([
-                np.asarray(self._seds[si], dtype=float) for si in idx])
-            extincted = sed_block * factor
-            for j, si in enumerate(idx):
-                row = self._seds[si]
-                if isinstance(row, np.ndarray):
-                    row[...] = extincted[j]
-                else:
-                    self._seds[si] = extincted[j]
+            self._seds[idx] *= factor
 
         # Units of `seds` is ergs / s / Angstrom.
         ret = {

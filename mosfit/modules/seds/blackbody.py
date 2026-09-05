@@ -48,16 +48,10 @@ class Blackbody(SED):
         radius_all = np.asarray(self._radius_phot, dtype=float)
         temperature_all = np.asarray(self._temperature_phot, dtype=float)
         n_rows = luminosities.shape[0]
-        seds = [None] * n_rows
+        seds = self.alloc_seds(n_rows)
 
         bol = band_indices == BOL_BAND_INDEX
         zero_lum = (luminosities == 0.0) & ~bol
-        for li in np.flatnonzero(bol):
-            seds[li] = np.zeros(1)
-        for li in np.flatnonzero(zero_lum):
-            bi = int(band_indices[li])
-            seds[li] = np.zeros(len(
-                self._sample_wavelengths[bi]) if bi >= 0 else 1)
 
         def _planck_block(rest_wavs, radius_phot, temperature_phot):
             """One Planck / numexpr eval for a shared wavelength grid."""
@@ -88,8 +82,7 @@ class Blackbody(SED):
             idx = np.flatnonzero(banded & (band_indices == bi))
             block = _planck_block(
                 rest_wavs, radius_all[idx], temperature_all[idx])
-            for j, li in enumerate(idx):
-                seds[li] = block[j]
+            seds[idx] = block
 
         freq_rows = (band_indices < 0) & ~bol & ~zero_lum
         if np.any(freq_rows):
@@ -97,21 +90,14 @@ class Blackbody(SED):
             rest_wavs = (czp1 / frequencies[idx])[:, None]
             block = _planck_block(
                 rest_wavs, radius_all[idx], temperature_all[idx])
-            for j, li in enumerate(idx):
-                seds[li] = block[j]
+            seds[idx, 0] = block[:, 0]
 
         seds = self.add_to_existing_seds(seds, **kwargs)
 
         # Units of `seds` is ergs / s / Angstrom.
-        try:
-            seds_out = np.asarray(seds)
-        except ValueError:
-            seds_out = np.empty(len(seds), dtype=object)
-            seds_out[:] = seds
-
         tor = {
             'sample_wavelengths': self._sample_wavelengths,
-            self.key('seds'): seds_out,
+            self.key('seds'): seds,
             'luminosities_out': self._luminosities,
             'times_out': self._times
         }
