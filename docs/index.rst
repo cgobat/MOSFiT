@@ -2,7 +2,7 @@
 MOSFiT
 ======
 
-Welcome to the documentation for MOSFiT (The Modular Open Source Fitter for Transients), a Python 3 package for fitting and estimating the parameters of astronomical transients via user-contributed models.
+Welcome to the documentation for MOSFiT (The Modular Open Source Fitter for Transients), a Python 3.11+ package for fitting and estimating the parameters of astronomical transients via user-contributed models. Development installs use `uv <https://docs.astral.sh/uv/>`__; the default sampler is nested sampling with ``dynesty``.
 
 Please see the links below for information on how to install and run the package.
 
