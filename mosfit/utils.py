@@ -288,10 +288,10 @@ def congrid(a, newdims, method='linear', center=False, minusone=False,
     This prevents extrapolation one element beyond bounds of input array.
     """
     if a.dtype not in [np.float64, np.float32]:
-        a = np.cast[float](a)
+        a = np.asarray(a, dtype=float)
 
-    m1 = np.cast[int](minusone)
-    ofs = np.cast[int](center) * 0.5
+    m1 = int(minusone)
+    ofs = int(center) * 0.5
     old = np.array(a.shape)
     ndims = len(a.shape)
     if len(newdims) != ndims:
@@ -303,8 +303,9 @@ def congrid(a, newdims, method='linear', center=False, minusone=False,
     dimlist = []
 
     if method == 'neighbour':
+        intdims = tuple(int(x) for x in newdims)
         for i in range(ndims):
-            base = np.indices(newdims)[i]
+            base = np.indices(intdims)[i]
             dimlist.append((old[i] - m1) / (newdims[i] - m1) *
                            (base + ofs) - ofs)
         cd = np.array(dimlist).round().astype(int)
@@ -339,10 +340,10 @@ def congrid(a, newdims, method='linear', center=False, minusone=False,
 
         return newa
     elif method in ['spline']:
-        nslices = [slice(0, j) for j in list(newdims)]
-        newcoords = np.mgrid[nslices]
+        nslices = [slice(0, int(j)) for j in list(newdims)]
+        newcoords = np.mgrid[nslices].astype(float)
 
-        newcoords_dims = list(range(np.rank(newcoords)))
+        newcoords_dims = list(range(np.ndim(newcoords)))
         # make first index last
         newcoords_dims.append(newcoords_dims.pop(0))
         newcoords_tr = newcoords.transpose(newcoords_dims)

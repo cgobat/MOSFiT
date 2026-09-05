@@ -83,3 +83,28 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["mosfit"]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.6",
+]
+
+[tool.coverage.run]
+source = ["mosfit"]
+omit = [
+    "mosfit/tests/*",
+    "mosfit/modules/seds/sesn_sedona.py",
+    "mosfit/emulators/*",
+]
+parallel = true
+branch = false
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = false
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

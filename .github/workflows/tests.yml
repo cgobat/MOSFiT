@@ -36,5 +36,5 @@ jobs:
       - name: Sync locked environment
         run: uv sync --frozen
 
-      - name: Run package tests
+      - name: Run package tests with coverage
         run: uv run python mosfit/tests/run_all.py

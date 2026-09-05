@@ -28,6 +28,9 @@ docs/api
 
 # uv
 .venv/
+htmlcov/
+.coverage
+.coverage.*
 # /*.* ignores every new root file with an extension unless negated
 !pyproject.toml
 !uv.lock
