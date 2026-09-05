@@ -1,5 +1,5 @@
 <p align="center"><img src="logo.png" align="left" alt="MOSFiT" width="300"/></p>
-<a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.x-blue.svg" alt="Python Version"></a>
+<a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.14.7-blue.svg" alt="Python Version"></a>
 <a href="https://badge.fury.io/py/mosfit"><img src="https://badge.fury.io/py/mosfit.svg" alt="PyPI version"></a>
 <a href="https://mosfit.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/mosfit/badge/?version=latest" alt="Documentation Status"></a>
 <a href="https://ascl.net/1710.006"><img src="https://img.shields.io/badge/ascl-1710.006-blue.svg?colorB=262255" alt="ascl:1710.006" /></a>
@@ -8,7 +8,17 @@
 
 ## Installation
 
-`MOSFiT` is available on `conda` and `pip`:
+Development installs use [uv](https://docs.astral.sh/uv/) and Python 3.14.7:
+
+```bash
+git clone https://github.com/guillochon/MOSFiT.git
+cd MOSFiT
+uv sync
+```
+
+Then run MOSFiT with `uv run mosfit ...`, or activate `.venv`.
+
+Published installs are also available via `conda` and `pip`:
 
 ```bash
 conda install -c conda-forge mosfit
@@ -20,12 +30,10 @@ or:
 pip install mosfit
 ```
 
-For a development install, clone the repository and install in editable mode:
+MPI support (`mpi4py`) is optional and needs a system MPI library:
 
 ```bash
-git clone https://github.com/guillochon/MOSFiT.git
-cd MOSFiT
-pip install -e .
+uv sync --extra mpi
 ```
 
 ## Using MOSFiT

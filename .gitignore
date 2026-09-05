@@ -25,3 +25,10 @@ mosfit/strings-*.json
 # Documentation
 docs/_build
 docs/api
+
+# uv
+.venv/
+# /*.* ignores every new root file with an extension unless negated
+!pyproject.toml
+!uv.lock
+!.python-version

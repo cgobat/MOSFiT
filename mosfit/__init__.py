@@ -28,21 +28,19 @@ __contributors__ = ' & '.join([', '.join(contributors[:-1]), contributors[-1]])
 __license__ = 'MIT'
 
 # Check astrocats version for schema compatibility.
+# Keep this floor in sync with the astrocats pin in pyproject.toml.
+_ASTROCATS_MIN_VERSION = (0, 3, 33)
 right_astrocats = True
 vparts = astrocats.__version__.split('.')
-req_path = os.path.join(dir_name, 'requirements.txt')
-with open(req_path, 'r') as f:
-    for req in f.read().splitlines():
-        if 'astrocats' in req:
-            vneed = req.split('=')[-1].split('.')
-            if int(vparts[0]) < int(vneed[0]):
-                right_astrocats = False
-            elif int(vparts[1]) < int(vneed[1]):
-                right_astrocats = False
-            elif int(vparts[2]) < int(vneed[2]):
-                right_astrocats = False
+vneed = [str(part) for part in _ASTROCATS_MIN_VERSION]
+if int(vparts[0]) < _ASTROCATS_MIN_VERSION[0]:
+    right_astrocats = False
+elif int(vparts[1]) < _ASTROCATS_MIN_VERSION[1]:
+    right_astrocats = False
+elif int(vparts[2]) < _ASTROCATS_MIN_VERSION[2]:
+    right_astrocats = False
 if not right_astrocats:
     raise ImportError(
         'Installed `astrocats` package is out of date for this version of '
         'MOSFiT, please upgrade your `astrocats` install to a version >= `' +
-        '.'.join(vneed) + '` with either `pip` or `conda`.')
+        '.'.join(vneed) + '` with `uv`, `pip`, or `conda`.')

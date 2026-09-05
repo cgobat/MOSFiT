@@ -50,7 +50,7 @@ class Viscous(Transform):
             (int_times - int_tes.reshape(lu, 1)) / tvisc)
         int_args[np.isnan(int_args)] = 0.0
 
-        uniq_lums = np.trapz(int_args, int_times) / tvisc
+        uniq_lums = np.trapezoid(int_args, int_times) / tvisc
         new_lums = uniq_lums[np.searchsorted(uniq_times,
                                              self._times_to_process)]
 

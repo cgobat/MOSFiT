@@ -13,7 +13,7 @@ Frequently Asked Questions
 What do I do if MOSFiT or one of its requirements isn't installing?
 ===================================================================
 
-We highly recommend using ``conda`` to install ``MOSFiT`` rather than ``pip``, as ``conda`` will skip some compilation steps that are common sources of error in the install process. If you are still having issues installing ``MOSFiT`` even with ``conda``, please ask us directly in the `#mosfit Slack channel on AstroChats <https://slack.astrocats.space>`_.
+For development, install from source with ``uv sync`` (see :ref:`source`). Published installs via ``conda`` or ``pip`` can skip some compilation steps that are common sources of error. If you are still having issues installing ``MOSFiT``, please ask us directly in the `#mosfit Slack channel on AstroChats <https://slack.astrocats.space>`_.
 
 What can I try if MOSFiT won't run?
 ===================================

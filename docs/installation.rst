@@ -47,10 +47,21 @@ Installing from source
 
 **Platforms:** macOS, Linux, and Windows
 
-For development work, clone the repository and install in editable mode:
+For development work, clone the repository and sync the project with
+`uv <https://docs.astral.sh/uv/>`__ (Python 3.14.7):
 
 .. code-block:: bash
 
     git clone https://github.com/guillochon/MOSFiT.git
     cd MOSFiT
-    pip install -e .
+    uv sync
+
+This creates a local virtual environment in ``.venv``. Run MOSFiT with
+``uv run mosfit ...``, or activate the environment and call ``mosfit``
+directly.
+
+MPI support is optional (``mpi4py`` needs a system MPI library):
+
+.. code-block:: bash
+
+    uv sync --extra mpi

@@ -18,7 +18,8 @@ on:
     paths:
       - Dockerfile
       - mosfit/**
-      - setup.py
+      - pyproject.toml
+      - uv.lock
       - .github/workflows/docker-publish.yml
   workflow_dispatch:
 
