@@ -55,9 +55,9 @@ jobs:
       - name: Pip-install the sdist without uv.lock
         run: |
           set -euo pipefail
-          # Pin 3.12 explicitly: `uv python find` would otherwise honor
-          # `.python-version` (3.14.7) even though this job installed 3.12.
-          uv venv --python 3.12 .venv-sdist
+          # Pin 3.12 (do not use `uv python find`, which honors `.python-version`).
+          # `--seed` installs pip; a bare `uv venv` has no pip module.
+          uv venv --python 3.12 --seed .venv-sdist
           .venv-sdist/bin/python -m pip install --upgrade pip
           .venv-sdist/bin/python -m pip install dist/mosfit-*.tar.gz
           .venv-sdist/bin/python -c "import mosfit; assert mosfit.__version__.startswith('2.')"
