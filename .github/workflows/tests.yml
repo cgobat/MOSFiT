@@ -38,3 +38,27 @@ jobs:
 
       - name: Run package tests with coverage
         run: uv run python mosfit/tests/run_all.py
+
+  sdist:
+    name: sdist / pip (conda-forge shape)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Pip-install the sdist without uv.lock
+        run: |
+          set -euo pipefail
+          PY=$(uv python find)
+          "$PY" -m venv .venv-sdist
+          .venv-sdist/bin/python -m pip install --upgrade pip
+          .venv-sdist/bin/python -m pip install dist/mosfit-*.tar.gz
+          .venv-sdist/bin/python -c "import mosfit; assert mosfit.__version__.startswith('2.')"
+          .venv-sdist/bin/mosfit --version
+          tar -tzf dist/mosfit-*.tar.gz | grep -E '/LICENSE$|/CHANGELOG.md$|/test.py$'

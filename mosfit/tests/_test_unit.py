@@ -200,6 +200,8 @@ if __name__ == '__main__':
     parser = get_parser()
     help_txt = parser.format_help()
     assert 'mosfit' in help_txt.lower() or 'Fit astrophysical' in help_txt
+    from mosfit import __version__ as mosfit_version
+    assert mosfit_version.startswith('2.')
     args = parser.parse_args(['-m', 'exppow', '-i', '1', '--quiet',
                               '--no-copy-at-launch'])
     assert args.models == 'exppow'

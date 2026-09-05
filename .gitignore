@@ -34,6 +34,8 @@ htmlcov/
 # /*.* ignores every new root file with an extension unless negated
 !pyproject.toml
 !uv.lock
+!CHANGELOG.md
+!test.py
 !.python-version
 !.dockerignore
 !.github/

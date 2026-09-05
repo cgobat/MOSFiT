@@ -15,6 +15,13 @@ What Python version does MOSFiT need?
 
 ``MOSFiT`` requires **Python 3.11 or newer**. Development installs use `uv <https://docs.astral.sh/uv/>`__ (``uv sync``); see :ref:`source`. The floor comes from runtime dependencies (``astrocats>=0.5.0``, NumPy 2.3, Astropy 7.1), not from MOSFiT-specific code.
 
+Where are the release notes?
+============================
+
+``CHANGELOG.md`` at the repository root. New work is listed under **Unreleased**
+until a version is tagged; see that file for how to cut a release. conda-forge
+submission notes live in ``recipe/``.
+
 What do I do if MOSFiT or one of its requirements isn't installing?
 ===================================================================
 

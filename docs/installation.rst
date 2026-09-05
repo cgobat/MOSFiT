@@ -85,9 +85,12 @@ a released ``MOSFiT`` can be installed via:
 
     conda install -c conda-forge mosfit
 
-The conda-forge package may not yet include the uv-based packaging,
-``dynesty`` default sampler, or optional extras described here. For those,
-use a source install with ``uv sync``.
+MOSFiT **2.0** is a hatchling package (no ``setup.py``). After this release is
+on PyPI, conda-forge needs a feedstock bump: use the template in ``recipe/``
+of this repository. **astrocats >= 0.5.0** must be on conda-forge first (the
+channel still has 0.3.37 at the time of writing). PyTorch and mpi4py are
+optional extras, not required conda run dependencies. Until that feedstock
+PR lands, install 2.0 from source with ``uv sync`` or from PyPI with pip.
 
 .. _docker:
 

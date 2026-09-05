@@ -4,7 +4,9 @@
 <a href="https://mosfit.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/mosfit/badge/?version=latest" alt="Documentation Status"></a>
 <a href="https://ascl.net/1710.006"><img src="https://img.shields.io/badge/ascl-1710.006-blue.svg?colorB=262255" alt="ascl:1710.006" /></a>
 
-`MOSFiT` (**M**odular **O**pen-**S**ource **Fi**tter for **T**ransients) is a Python 3.11+ package for fitting, sharing, and estimating the parameters of transients via user-contributed transient models. Data for a transient can be provided by the user in a wide range of formats (JSON, ASCII tables, CDS, LaTeX).<br clear="all">
+`MOSFiT` (**M**odular **O**pen-**S**ource **Fi**tter for **T**ransients) is a Python 3.11+ package for fitting, sharing, and estimating the parameters of transients via user-contributed transient models. This is **MOSFiT 2.0**. Data for a transient can be provided by the user in a wide range of formats (JSON, ASCII tables, CDS, LaTeX).<br clear="all">
+
+See [CHANGELOG.md](CHANGELOG.md) for unreleased work and versioned notes.
 
 ## Installation
 
@@ -18,7 +20,9 @@ uv sync
 
 Then run MOSFiT with `uv run mosfit ...`, or activate `.venv`.
 
-Published installs are also available via `conda` and `pip`:
+Published installs are also available via `conda` and `pip`. conda-forge will
+ship 2.0 after a feedstock update (see `recipe/`); `astrocats >= 0.5.0` must
+land on conda-forge first:
 
 ```bash
 conda install -c conda-forge mosfit
