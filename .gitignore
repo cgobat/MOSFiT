@@ -32,3 +32,4 @@ docs/api
 !pyproject.toml
 !uv.lock
 !.python-version
+!.dockerignore
