@@ -140,11 +140,15 @@ if __name__ == '__main__':
     print('printer ok')
 
     fixture = os.path.abspath('mosfit/tests/PS1-10jh.json')
+    lsq = os.path.abspath('mosfit/tests/LSQ12dlf.json')
     fetcher = Fetcher(test=True, printer=prt_q)
     fetched = fetcher.fetch([fixture])
     assert fetched[0]['name'] == 'PS1-10jh'
     data = fetcher.load_data(fetched[0])
     assert data is not None
+    fetched_lsq = fetcher.fetch([lsq])
+    assert fetched_lsq[0]['name'] == 'LSQ12dlf'
+    assert fetcher.load_data(fetched_lsq[0]) is not None
     try:
         fetcher.fetch(['definitely-missing-event.json'])
         raise SystemExit('missing event should raise')
