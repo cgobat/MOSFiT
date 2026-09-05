@@ -124,7 +124,7 @@ class Fitter(object):
     def fit_events(self,
                    events=[],
                    models=[],
-                   max_time='',
+                   max_time=1000.,
                    time_list=[],
                    time_unit=None,
                    band_list=[],
@@ -827,7 +827,9 @@ class Fitter(object):
             lo, hi = float(lf[0]), float(lf[1])
             base_times = list(np.linspace(lo, hi, plot_points))
         else:
-            base_times = list(np.linspace(0.0, max_time, plot_points))
+            if max_time in (None, ''):
+                max_time = 1000.
+            base_times = list(np.linspace(0.0, float(max_time), plot_points))
 
         times = list(sorted(set(base_times + tl)))
         band_list_all = ['V'] if len(band_list) == 0 else band_list
