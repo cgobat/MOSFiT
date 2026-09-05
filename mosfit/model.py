@@ -25,6 +25,15 @@ from six import string_types
 # from bayes_opt import BayesianOptimization
 
 
+def task_module_qualname(kinds, leaf):
+    """Fully-qualified name for a MOSFiT module loaded from disk.
+
+    Must be a real import path such as ``mosfit.modules.transforms.viscous``.
+    Numba ``cache=True`` pickles this name and reimports it in later processes.
+    """
+    return 'mosfit.modules.{}.{}'.format(kinds, leaf)
+
+
 class Model(object):
     """Define a semi-analytical model to fit transients with."""
 
@@ -350,7 +359,7 @@ class Model(object):
         if not os.path.isfile(mod_path):
             mod_path = os.path.join(self._dir_path, 'modules', kinds,
                                     mod_name + '.py')
-        mod_name = 'mosfit.modules.' + kinds + mod_name
+        mod_name = task_module_qualname(kinds, mod_name)
         try:
             mod = importlib.machinery.SourceFileLoader(mod_name,
                                                        mod_path).load_module()

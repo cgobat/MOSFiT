@@ -551,6 +551,33 @@ def test_viscous_matches_interp1d():
     print('Viscous exponential recurrence matches serial formula')
 
 
+def test_viscous_loader_name_is_importable():
+    """MOSFiT's dynamic loader name must be a real package path.
+
+    Concatenating ``transforms`` + ``viscous`` without a dot made Numba's
+    disk cache pickle ``mosfit.modules.transformsviscous``, which later
+    processes cannot import.
+    """
+    import importlib
+    import importlib.machinery
+    from mosfit.model import task_module_qualname
+
+    name = task_module_qualname('transforms', 'viscous')
+    assert name == 'mosfit.modules.transforms.viscous'
+    mod = importlib.import_module(name)
+    assert hasattr(mod, 'viscous_exp_filter')
+
+    path = os.path.join(
+        os.path.dirname(mod.__file__), 'viscous.py')
+    loaded = importlib.machinery.SourceFileLoader(name, path).load_module()
+    t = np.array([0.0, 1.0, 2.0])
+    lums = np.array([0.0, 1.0, 0.0])
+    y = loaded.viscous_exp_filter(t, lums, t, 1.0, 0.0, 2.0)
+    y2 = mod.viscous_exp_filter(t, lums, t, 1.0, 0.0, 2.0)
+    np.testing.assert_allclose(y, y2, rtol=0, atol=0)
+    print('Viscous loader module name is importable')
+
+
 if __name__ == '__main__':
     test_import_no_torch()
     test_blackbody_matches_serial()
@@ -560,5 +587,6 @@ if __name__ == '__main__':
     test_mm83()
     test_fallback_golden()
     test_viscous_matches_interp1d()
+    test_viscous_loader_name_is_importable()
     print('all numeric tests passed')
     sys.exit(0)
