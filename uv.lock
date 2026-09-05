@@ -25,7 +25,7 @@ wheels = [
 [[package]]
 name = "astrocats"
 version = "0.5.0"
-source = { git = "https://github.com/astrocatalogs/astrocats?branch=python-3.14-uv#e25c1e3206fb4a7a9369d948aa5ea61cf7f22095" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astropy" },
     { name = "beautifulsoup4" },
@@ -41,6 +41,10 @@ dependencies = [
     { name = "requests" },
     { name = "seaborn" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/92/9b/522783fe4adb78d8c8d5181193fcf6fc6b21b7a98cfef865f50b1476bf3a/astrocats-0.5.0.tar.gz", hash = "sha256:19584117e841c79f682218978325ddba5cce482bccbc85d2dbf377a72fae5a01", size = 238215, upload-time = "2026-09-05T18:56:03.368Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/57/b2c67a8de8d52a188e761439e70a603a26aba494816f07d8999cd4d13ab2/astrocats-0.5.0-py3-none-any.whl", hash = "sha256:5b52c66ae6996a365ac5c8999cd916a7167d4ce6eff31dff8bba2edf2ed6c08a", size = 135877, upload-time = "2026-09-05T18:56:02.147Z" },
 ]
 
 [[package]]
@@ -1173,7 +1177,7 @@ sedona = [
 
 [package.metadata]
 requires-dist = [
-    { name = "astrocats", git = "https://github.com/astrocatalogs/astrocats?branch=python-3.14-uv" },
+    { name = "astrocats", specifier = ">=0.5.0" },
     { name = "astropy", specifier = ">=7.1" },
     { name = "dynesty", specifier = ">=3.1" },
     { name = "emcee", specifier = ">=3.0.2" },
