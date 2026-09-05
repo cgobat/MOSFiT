@@ -864,7 +864,7 @@ mpi = [
 requires-dist = [
     { name = "astrocats", path = "vendor/astrocats-0.3.37-py3-none-any.whl" },
     { name = "astropy", specifier = ">=5.0.1" },
-    { name = "dynesty", specifier = ">=2.0.0" },
+    { name = "dynesty", specifier = ">=3.1" },
     { name = "emcee", specifier = ">=3.0.2" },
     { name = "extinction", specifier = ">=0.2.2" },
     { name = "h5py", specifier = ">=3.8.0" },

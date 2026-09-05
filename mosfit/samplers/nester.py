@@ -106,10 +106,13 @@ class Nester(Sampler):
                 dlogz=nested_dlogz_init, nlive=self._nlive
             )):
                 ncall0 = ncall
-                (worst, ustar, vstar, loglstar, logvol,
-                 logwt, self._logz, logzvar, h, nc, worst_it,
-                 propidx, propiter, eff, delta_logz) = res[:15]
-                
+                loglstar = res.loglstar
+                self._logz = res.logz
+                logzvar = res.logzvar
+                nc = res.nc
+                eff = res.eff
+                delta_logz = res.delta_logz
+
                 ncall += nc
                 self._niter += 1
                 max_iter -= 1
@@ -164,7 +167,8 @@ class Nester(Sampler):
 
                 stop, stop_vals = stopping_function(
                     self._results, return_vals=True, args={
-                        'post_thresh': post_thresh})
+                        'evid_thresh': post_thresh
+                        if post_thresh is not None else 0.1})
                 stop_post, stop_evid, stop_val = stop_vals
                 if not stop:
                     logl_bounds = weight_function(self._results)
@@ -173,8 +177,9 @@ class Nester(Sampler):
                     for res in sampler.sample_batch(
                             logl_bounds=logl_bounds,
                             nlive_new=int(np.ceil(self._nlive / 2))):
-                        (worst, ustar, vstar, loglstar, nc,
-                         worst_it, propidx, propiter, eff) = res
+                        loglstar = res.loglstar
+                        nc = res.nc
+                        eff = res.eff
                         ncall0 = ncall
 
                         ncall += nc

@@ -44,9 +44,9 @@ Sampling Options
 ----------------
 
 ``MOSFiT`` at present offers three ways to sample the parameter space: an ensemble-based MCMC (implemented with the ``emcee`` package), and two nested sampling approaches (implemented with the ``ultranest`` and ``dynesty`` packages).
-The ensemble-based approach is presently the default sampler used in ``MOSFiT``, although nested sampling (which in preliminary testing performs better) is likely to replace it as the default in a future version.
+Nested sampling with ``dynesty`` is the default sampler.
 
-Samplers are selected via the ``-D`` option: ``-D ensembler`` for the ensemble-based approach, ``-D dynesty`` for nested sampling with ``dynesty``, and ``-D ultranest`` for ultranest. The approaches are described below.
+Samplers are selected via the ``-D`` option: ``-D dynesty`` for nested sampling with ``dynesty`` (the default), ``-D ensembler`` for the ensemble-based approach, and ``-D ultranest`` for ultranest. The approaches are described below.
 
 .. _ensembler:
 
@@ -57,7 +57,7 @@ In ensemble-based Markov chain Monte Carlo, a collection of parameter positions 
 
 While ``MOSFiT`` also performs minimization during the burn-in phase to find the global minima within the posterior, it should be noted that ``emcee`` on its own has been found to have poor convergence to the posterior for problems with greater than about 10 dimensions (`Huijser et al. 2015 <https://arxiv.org/abs/1509.02230>`_). As many models provided with ``MOSFiT`` have a dimension similar to this number, care should be taken when using this sampler to ensure that convergence has been achieved.
 
-The ensemble-based MCMC can be selected via the ``-D`` flag: ``-D ensembler``.
+The ensemble-based MCMC can be selected via the ``-D`` flag: ``-D ensembler`` (it is no longer the default).
 
 .. _initialization:
 
@@ -151,7 +151,7 @@ Whereas ensemble-based approaches can only estimate the information content of t
 
 However, nested sampling is a much more complicated algorithm than ensemble-based MCMC and thus is potentially prone to failures that can be difficult to track down. Additionally, the ``dynesty`` software currently does not offer the ability to restart if the sampling is prematurely terminated; thus, it is advisable to always use the nested sampling routine in conjunction with the ``-R`` flag, which when used with ``-D dynesty`` specifies the termination criterion based upon the expected remaining evidence gain.
 
-The nested sampler can be selected via the ``-D`` flag: ``-D dynesty``.
+The nested sampler is the default, and can also be selected explicitly via the ``-D`` flag: ``-D dynesty``.
 
 .. _baselining-batching:
 
@@ -167,7 +167,7 @@ In batching, ``dynesty`` fleshes out the posterior such that even regions of low
 Switching between samplers
 ==========================
 
-After completing a nested sampling run, it is often useful to draw parameter combinations from the large collection of samples generated to perform additional analysis (particularly for data-intensive tasks, such as analyzing a collection of model SEDs). This can be easily done by loading the output from the previous run with the ``ensembler`` method (the default), and setting ``MOSFiT`` to run in generative mode with ``-G``,
+After completing a nested sampling run, it is often useful to draw parameter combinations from the large collection of samples generated to perform additional analysis (particularly for data-intensive tasks, such as analyzing a collection of model SEDs). This can be easily done by loading the output from the previous run with the ``ensembler`` method (via ``-D ensembler``), and setting ``MOSFiT`` to run in generative mode with ``-G``,
 
 .. code-block:: bash
 

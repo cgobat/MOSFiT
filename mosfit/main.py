@@ -502,7 +502,7 @@ def get_parser(printer=None):
         '-D',
         dest='method',
         choices=['ensembler', 'ultranest', 'dynesty'],
-        default='ensembler',
+        default='dynesty',
         help=prt.text('parser_method'))
 
     return parser

@@ -171,7 +171,7 @@ class Fitter(object):
                    walker_paths=[],
                    exit_on_prompt=False,
                    guess=True,
-                   method=None,
+                   method='dynesty',
                    seed=None,
                    **kwargs):
         """Fit a list of events with a list of models."""
@@ -423,7 +423,7 @@ class Fitter(object):
 
     def fit_data(self,
                  event_name='',
-                 method=None,
+                 method='dynesty',
                  iterations=None,
                  frack_step=20,
                  num_walkers=None,
