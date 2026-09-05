@@ -99,12 +99,32 @@ class Nester(Sampler):
                 ln_likelihood, draw_from_icdf, ndim,
                 pool=self._pool, sample='rwalk',
                 queue_size=pool_queue_size(self._pool))
+
+            def _disable_saved_bounds():
+                """Skip ellipsoid history. MOSFiT never uses it; Results()
+                otherwise deep-copies the whole list (very expensive)."""
+                inner = getattr(sampler, 'sampler', None)
+                if inner is not None:
+                    inner.save_bounds = False
+                    if getattr(inner, 'bound_list', None) is not None:
+                        inner.bound_list = []
+                    sampler.bound_list = getattr(
+                        inner, 'bound_list', [])
+
+            def _snapshot_results():
+                _disable_saved_bounds()
+                return sampler.results
+
             # Perform initial sample.
             ncall = sampler.ncall
             self._niter = sampler.it - 1
+            inner_ready = False
             for li, res in enumerate(sampler.sample_initial(
                 dlogz=nested_dlogz_init, nlive=self._nlive
             )):
+                if not inner_ready:
+                    _disable_saved_bounds()
+                    inner_ready = True
                 ncall0 = ncall
                 loglstar = res.loglstar
                 self._logz = res.logz
@@ -137,7 +157,8 @@ class Nester(Sampler):
                     time_running=self.time_running(),
                     maximum_walltime=self._fitter._maximum_walltime)
 
-            self._results = sampler.results
+            # One Results snapshot after baseline (stop/weight + output).
+            self._results = _snapshot_results()
             if getattr(self._results, 'scale', None) is not None:
                 scales.append(self._results.scale)
 
@@ -161,10 +182,6 @@ class Nester(Sampler):
                     prt.message('exceeded_walltime', warning=True)
                     break
 
-                self._results = sampler.results
-
-                scales.append(sampler.results.scale)
-
                 stop, stop_vals = stopping_function(
                     self._results, return_vals=True, args={
                         'evid_thresh': post_thresh
@@ -176,7 +193,8 @@ class Nester(Sampler):
                         -1], self._results.logzerr[-1]
                     for res in sampler.sample_batch(
                             logl_bounds=logl_bounds,
-                            nlive_new=int(np.ceil(self._nlive / 2))):
+                            nlive_new=int(np.ceil(self._nlive / 2)),
+                            save_bounds=False):
                         loglstar = res.loglstar
                         nc = res.nc
                         eff = res.eff
@@ -199,6 +217,9 @@ class Nester(Sampler):
                         if max_iter < 0:
                             break
                     sampler.combine_runs()
+                    self._results = _snapshot_results()
+                    if getattr(self._results, 'scale', None) is not None:
+                        scales.append(self._results.scale)
                 else:
                     break
 
