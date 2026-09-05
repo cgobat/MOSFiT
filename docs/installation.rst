@@ -48,7 +48,7 @@ Installing from source
 **Platforms:** macOS, Linux, and Windows
 
 For development work, clone the repository and sync the project with
-`uv <https://docs.astral.sh/uv/>`__ (Python 3.14.7):
+`uv <https://docs.astral.sh/uv/>`__ (Python 3.11 or newer):
 
 .. code-block:: bash
 

@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Modular software for fitting semi-analytical model predictions to observed astronomical transient data."
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.14.7"
+requires-python = ">=3.11"
 authors = [
     { name = "James Guillochon", email = "guillochon@gmail.com" },
     { name = "Matt Nicholl" },
@@ -19,13 +19,16 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Astronomy",
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
-    "astrocats>=0.3.33",
-    "astropy>=5.0.1",
+    "astrocats>=0.5.0",
+    "astropy>=7.1",
     "dynesty>=3.1",
     "emcee>=3.0.2",
     "extinction>=0.2.2",
@@ -34,7 +37,7 @@ dependencies = [
     "matplotlib>=3.0.0",
     "nbstripout>=0.2.9",
     "numexpr>=2.6.1",
-    "numpy>=2.2",
+    "numpy>=2.3",
     "pandas>=2.2",
     "palettable>=2.1.1",
     "schwimmbad>=0.4.2",
@@ -80,7 +83,7 @@ include = [
 [tool.hatch.build.targets.wheel]
 packages = ["mosfit"]
 
-# astrocats 0.3.37 ships a `universal-none-any` wheel tag that uv rejects.
-# Use the rebuilt py3 wheel in vendor/ (see vendor/README.md).
+# astrocats 0.5.0 (astrocatalogs/astrocats#95) is not on PyPI yet.
+# Drop this source once 0.5.0 is published; the specifier above is enough.
 [tool.uv.sources]
-astrocats = { path = "vendor/astrocats-0.3.37-py3-none-any.whl" }
+astrocats = { git = "https://github.com/astrocatalogs/astrocats", branch = "python-3.14-uv" }

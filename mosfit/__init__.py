@@ -29,7 +29,7 @@ __license__ = 'MIT'
 
 # Check astrocats version for schema compatibility.
 # Keep this floor in sync with the astrocats pin in pyproject.toml.
-_ASTROCATS_MIN_VERSION = (0, 3, 33)
+_ASTROCATS_MIN_VERSION = (0, 5, 0)
 right_astrocats = True
 vparts = astrocats.__version__.split('.')
 vneed = [str(part) for part in _ASTROCATS_MIN_VERSION]

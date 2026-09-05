@@ -1,5 +1,5 @@
 <p align="center"><img src="logo.png" align="left" alt="MOSFiT" width="300"/></p>
-<a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.14.7-blue.svg" alt="Python Version"></a>
+<a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python Version"></a>
 <a href="https://badge.fury.io/py/mosfit"><img src="https://badge.fury.io/py/mosfit.svg" alt="PyPI version"></a>
 <a href="https://mosfit.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/mosfit/badge/?version=latest" alt="Documentation Status"></a>
 <a href="https://ascl.net/1710.006"><img src="https://img.shields.io/badge/ascl-1710.006-blue.svg?colorB=262255" alt="ascl:1710.006" /></a>
@@ -8,7 +8,7 @@
 
 ## Installation
 
-Development installs use [uv](https://docs.astral.sh/uv/) and Python 3.14.7:
+Development installs use [uv](https://docs.astral.sh/uv/) and Python 3.11+:
 
 ```bash
 git clone https://github.com/guillochon/MOSFiT.git
