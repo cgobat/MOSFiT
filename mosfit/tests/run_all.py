@@ -1,8 +1,7 @@
 """Run every MOSFiT package test script.
 
 Discovers ``mosfit/tests/_test_*.py`` and the repo-root generative smoke
-``test.py``. This is what GitHub Actions CI invokes; ``test.sh`` is a separate,
-legacy CLI suite and is not included here.
+``test.py``. This is what GitHub Actions CI invokes.
 """
 from __future__ import print_function
 

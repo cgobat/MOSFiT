@@ -92,9 +92,10 @@ class Photometry(Module):
         bands = listify(bands)
 
         self._dir_path = os.path.dirname(os.path.realpath(__file__))
-        self._filter_run_path = os.path.join('modules','observables')
-        if not os.path.exists(self._filter_run_path):
-            os.makedirs(self._filter_run_path)
+        self._filter_run_path = os.path.join('modules', 'observables')
+        os.makedirs(
+            os.path.join(self._filter_run_path, 'filters'), exist_ok=True)
+        os.makedirs(os.path.join(self._dir_path, 'filters'), exist_ok=True)
 
         band_list = []
 

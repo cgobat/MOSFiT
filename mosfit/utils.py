@@ -760,8 +760,11 @@ def open_atomic(filepath, *args, **kwargs):
     """
     fsync = kwargs.get('fsync', False)
 
-    with temp_atomic(
-            dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
+    dest_dir = os.path.dirname(os.path.abspath(filepath))
+    if dest_dir:
+        os.makedirs(dest_dir, exist_ok=True)
+
+    with temp_atomic(dir=dest_dir) as tmppath:
         with open(tmppath, *args, **kwargs) as file:
             try:
                 yield file

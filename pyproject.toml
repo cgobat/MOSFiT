@@ -79,7 +79,6 @@ include = [
     "/LICENSE",
     "/README.md",
     "/test.py",
-    "/test.sh",
 ]
 
 [tool.hatch.build.targets.wheel]
