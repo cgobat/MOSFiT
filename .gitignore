@@ -33,3 +33,6 @@ docs/api
 !uv.lock
 !.python-version
 !.dockerignore
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
