@@ -458,6 +458,64 @@ def test_fallback_golden():
     print('Fallback engine matches golden draws')
 
 
+def test_viscous_matches_interp1d():
+    """np.interp + cached nodes match the previous interp1d viscous integral."""
+    from scipy.interpolate import interp1d
+    from mosfit.modules.transforms.viscous import Viscous
+
+    rest_t = 10.0
+    dense = np.unique(np.concatenate((
+        [0.0], np.logspace(-6, 2, 80) + rest_t, np.linspace(0, 80, 40))))
+    lums = 1e43 * np.exp(-np.clip(dense - rest_t, 0, None) / 15.0) * (
+        dense >= rest_t)
+    rest_times = np.linspace(0, 80, 120)
+    tvisc = 3.5
+    kwargs = dict(
+        rest_times=rest_times,
+        resttexplosion=rest_t,
+        dense_times=dense,
+        dense_luminosities=lums,
+        Tviscous=tvisc,
+    )
+
+    v = Viscous(name='viscous', model=_fallback_dummy_model())
+    v._provide_dense = True
+    out = v.process(**kwargs)
+    y = np.asarray(out['dense_luminosities'])
+    out2 = v.process(**kwargs)
+    np.testing.assert_allclose(y, out2['dense_luminosities'], rtol=0, atol=0)
+
+    # Independent replica of the old SciPy path.
+    from mosfit.modules.transforms.transform import Transform
+    Transform.process(v, **kwargs)
+    dense_t = np.asarray(v._dense_times_since_exp, dtype=float)
+    dense_l = np.asarray(v._dense_luminosities, dtype=float)
+    min_te = min(v._dense_times_since_exp)
+    tb = max(0.0, min_te)
+    linterp = interp1d(dense_t, dense_l, copy=False, assume_sorted=True)
+    uniq_times = np.unique(v._times_to_process[
+        (v._times_to_process >= tb) & (v._times_to_process <= dense_t[-1])])
+    lu = len(uniq_times)
+    num = int(Viscous.N_INT_TIMES / 2.0)
+    lsp = np.logspace(
+        np.log10(tvisc / dense_t[-1]) + Viscous.MIN_LOG_SPACING, 0, num)
+    xm = np.unique(np.concatenate((lsp, 1 - lsp)))
+    int_times = np.clip(
+        tb + (uniq_times.reshape(lu, 1) - tb) * xm, tb, dense_t[-1])
+    int_lums = linterp(int_times)
+    int_args = int_lums * np.exp(
+        (int_times - int_times[:, -1].reshape(lu, 1)) / tvisc)
+    int_args[np.isnan(int_args)] = 0.0
+    uniq_lums = np.trapezoid(int_args, int_times) / tvisc
+    ref = uniq_lums[np.searchsorted(uniq_times, v._times_to_process)]
+    np.testing.assert_allclose(y, ref, rtol=1e-12, atol=0)
+    np.testing.assert_allclose(float(np.sum(y)), 1.5364061218711165e+44,
+                               rtol=1e-12)
+    np.testing.assert_allclose(float(np.max(y)), 6.41980422636273e+42,
+                               rtol=1e-12)
+    print('Viscous np.interp matches interp1d quadrature')
+
+
 if __name__ == '__main__':
     test_import_no_torch()
     test_blackbody_matches_serial()
@@ -466,5 +524,6 @@ if __name__ == '__main__':
     test_diagonal_residuals()
     test_mm83()
     test_fallback_golden()
+    test_viscous_matches_interp1d()
     print('all numeric tests passed')
     sys.exit(0)
