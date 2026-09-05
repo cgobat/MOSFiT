@@ -166,7 +166,83 @@ def test_photometry_trapz():
     ldist = np.log10(FOUR_PI * (100.0 * MPC_CGS) ** 2)
     mags = -0.0 - MAG_FAC * (np.log10(eff) - ldist)
     np.testing.assert_allclose(out['model_observations'], mags, rtol=1e-10)
+    out2 = phot.process(**kwargs)
+    np.testing.assert_allclose(out2['model_observations'], mags, rtol=1e-10)
+    assert phot._trans_on_sample[0] is not None
     print('Photometry band-grouped trapz matches serial formula')
+
+
+def test_photometry_filter_cache_interp():
+    """Cached filter interp matches on-the-fly np.interp when grids differ."""
+    from mosfit.modules.observables.photometry import Photometry
+    from mosfit.constants import FOUR_PI, MAG_FAC, MPC_CGS
+
+    class DummyPool(object):
+        size = 0
+        comm = None
+
+        def is_master(self):
+            return True
+
+    class DummyPrinter(object):
+        def message(self, *a, **k):
+            return ''
+
+        def text(self, *a, **k):
+            return ''
+
+        def prt(self, *a, **k):
+            return ''
+
+    class DummyModel(object):
+        def pool(self):
+            return DummyPool()
+
+        def printer(self):
+            return DummyPrinter()
+
+    phot = Photometry.__new__(Photometry)
+    phot._model = DummyModel()
+    phot._pool = DummyPool()
+    phot._printer = DummyPrinter()
+    phot._preprocessed = True
+    phot._name = 'photometry'
+    phot._replacements = {}
+    native = np.linspace(3500.0, 9000.0, 41)
+    trans = np.exp(-((native - 6000.0) / 900.0) ** 2)
+    sample = np.linspace(4000.0, 8000.0, 17)
+    phot._band_wavelengths = [native]
+    phot._transmissions = [trans]
+    phot._band_areas = [[]]
+    phot._band_offsets = np.array([0.0])
+    phot._filter_integrals = np.array([
+        Photometry.FLUX_STD * np.trapezoid(trans / native ** 2, native)])
+    n = 8
+    seds = np.stack([np.linspace(1e38, 2e38, 17) * (i + 1) for i in range(n)])
+    kwargs = {
+        'luminosities': np.ones(n),
+        'all_band_indices': np.zeros(n, dtype=int),
+        'observation_types': np.array(['magnitude'] * n),
+        'observed': np.ones(n, dtype=bool),
+        'lumdist': 80.0,
+        'all_frequencies': np.zeros(n),
+        'redshift': 0.05,
+        'sample_wavelengths': [sample],
+        'seds': seds,
+    }
+    out = phot.process(**kwargs)
+    trans_i = np.interp(sample, native, trans)
+    zp1 = 1.05
+    yvals = trans_i * seds / zp1
+    eff = np.trapezoid(yvals, sample, axis=-1) / phot._filter_integrals[0]
+    ldist = np.log10(FOUR_PI * (80.0 * MPC_CGS) ** 2)
+    mags = - MAG_FAC * (np.log10(eff) - ldist)
+    np.testing.assert_allclose(out['model_observations'], mags, rtol=1e-10)
+    np.testing.assert_allclose(phot._trans_on_sample[0], trans_i, rtol=0,
+                               atol=0)
+    out2 = phot.process(**kwargs)
+    np.testing.assert_allclose(out2['model_observations'], mags, rtol=1e-10)
+    print('Photometry filter cache matches np.interp')
 
 
 def test_diagonal_residuals():
@@ -268,11 +344,127 @@ def test_mm83():
     print('mm83 vectorized matches list-comprehension formula')
 
 
+def _fallback_dummy_model():
+    class DummyPool(object):
+        size = 0
+        comm = None
+
+        def is_master(self):
+            return True
+
+    class DummyPrinter(object):
+        def message(self, *a, **k):
+            return ''
+
+        def text(self, *a, **k):
+            return ''
+
+        def prt(self, *a, **k):
+            return ''
+
+    class DummyModel(object):
+        def pool(self):
+            return DummyPool()
+
+        def printer(self):
+            return DummyPrinter()
+
+    return DummyModel()
+
+
+def test_fallback_golden():
+    """TDE Fallback engine matches pre-NumPyization reference draws."""
+    from mosfit.modules.engines.fallback import Fallback
+
+    fb = Fallback(name='fallback', model=_fallback_dummy_model())
+    fb._provide_dense = True
+    times = np.unique(np.concatenate((
+        [0.0], np.logspace(-6, 2, 100) + 10.0, np.linspace(0, 120, 40))))
+    cases = [
+        dict(b=0.7, starmass=0.5, bhmass=1e7, resttexplosion=10.0,
+             efficiency=0.1, Leddlim=1.0, dense_times=times),
+        dict(b=1.2, starmass=8.0, bhmass=1e6, resttexplosion=5.0,
+             efficiency=0.01, Leddlim=2.0, dense_times=times),
+        dict(b=0.4, starmass=0.5, bhmass=5e6, resttexplosion=12.0,
+             efficiency=0.05, Leddlim=1.0, dense_times=times),
+        dict(b=0.2, starmass=18.0, bhmass=2e6, resttexplosion=8.0,
+             efficiency=0.2, Leddlim=1.5, dense_times=times),
+    ]
+    expected = [
+        dict(Rstar=0.45793094821444064, tpeak=62.85075767517639,
+             beta=0.9785714285714286, tfallback=43.53189249267144,
+             Ledd=1.4366896299274834e+45, lum_sum=2.7710499828301767e+46,
+             lum_max=7.638370418643626e+44, dmdt_sum=5.6062764714291976e+26,
+             lum0=[1.0857703619278655e+38, 1.6528214942483027e+39,
+                   2.2610565163202123e+40, 2.792625467582705e+41,
+                   5.164827934172274e+41, 5.164828782023136e+41,
+                   5.1648298032624925e+41, 5.164831033348916e+41],
+             lum40=[5.1681866533337065e+41, 5.1688743709498475e+41,
+                    5.1697027291657415e+41, 5.170700489442526e+41,
+                    5.171902295044171e+41, 5.17334987387902e+41,
+                    5.175093487322971e+41, 5.177193675326944e+41]),
+        dict(Rstar=3.2673242592313327, tpeak=22.12046500273871,
+             beta=2.28, tfallback=4.251391663150998,
+             Ledd=1.4366896299274836e+44, lum_sum=3.642094706671135e+46,
+             lum_max=2.826626435272511e+44, dmdt_sum=7.528376770927641e+28,
+             lum0=[0.0, 7.507834342980549e+38, 4.983278396334756e+43,
+                   2.5590165046518173e+44, 2.6472293354960365e+44,
+                   2.6472293532181025e+44, 2.6472293745643895e+44,
+                   2.6472294002760626e+44],
+             lum40=[2.647299518815636e+44, 2.647313883896991e+44,
+                    2.647331184264855e+44, 2.6473520191039516e+44,
+                    2.647377109642813e+44, 2.6474073238910075e+44,
+                    2.6474437063358467e+44, 2.647487513568258e+44]),
+        dict(Rstar=0.45793094821444064, tpeak=47.78384362963816,
+             beta=0.7857142857142858, tfallback=40.54390246908036,
+             Ledd=7.183448149637417e+44, lum_sum=8.157357339457045e+45,
+             lum_max=2.571276983096958e+44, dmdt_sum=2.5095187370787093e+26,
+             lum0=[7.110072264678295e+35, 2.0908697837684794e+37,
+                   5.294665830233182e+38, 1.1692555638944066e+40,
+                   2.482753579129413e+40, 2.482754104413379e+40,
+                   2.482754737119771e+40, 2.482755499216862e+40],
+             lum40=[2.4848344659498873e+40, 2.4852605399406297e+40,
+                    2.4857737475641795e+40, 2.4863919079539e+40,
+                    2.4871364843176347e+40, 2.488033329163258e+40,
+                    2.4891135819251427e+40, 2.490414750158064e+40]),
+        dict(Rstar=5.300277743392906, tpeak=34.000670082779045,
+             beta=0.7342857142857143, tfallback=30.681094958527872,
+             Ledd=2.873379259854967e+44, lum_sum=2.740613590552974e+46,
+             lum_max=4.19074542001477e+44, dmdt_sum=2.1255254353845016e+27,
+             lum0=[3.7164217421970233e+40, 4.526128916747076e+41,
+                   4.744151844041845e+42, 4.0623125502845477e+43,
+                   6.53510243562584e+43, 6.535103210918421e+43,
+                   6.535104144761026e+43, 6.535105269577687e+43],
+             lum40=[6.538173461581153e+43, 6.538802208864473e+43,
+                    6.539559508483632e+43, 6.540471636905956e+43,
+                    6.541570238397375e+43, 6.542893420128521e+43,
+                    6.544487070050231e+43, 6.546406442562971e+43]),
+    ]
+    for i, (kw, exp) in enumerate(zip(cases, expected)):
+        out = fb.process(**kw)
+        lum = np.asarray(out['dense_luminosities'], dtype=float)
+        np.testing.assert_allclose(out['Rstar'], exp['Rstar'], rtol=1e-12)
+        np.testing.assert_allclose(out['tpeak'], exp['tpeak'], rtol=1e-12)
+        np.testing.assert_allclose(out['beta'], exp['beta'], rtol=1e-12)
+        np.testing.assert_allclose(out['tfallback'], exp['tfallback'],
+                                   rtol=1e-12)
+        np.testing.assert_allclose(out['Ledd'], exp['Ledd'], rtol=1e-12)
+        np.testing.assert_allclose(np.sum(lum), exp['lum_sum'], rtol=1e-10)
+        np.testing.assert_allclose(np.max(lum), exp['lum_max'], rtol=1e-10)
+        np.testing.assert_allclose(np.sum(out['dmdt']), exp['dmdt_sum'],
+                                   rtol=1e-10)
+        np.testing.assert_allclose(lum[:8], exp['lum0'], rtol=1e-10)
+        np.testing.assert_allclose(lum[40:48], exp['lum40'], rtol=1e-10)
+    print('Fallback engine matches golden draws')
+
+
 if __name__ == '__main__':
     test_import_no_torch()
     test_blackbody_matches_serial()
     test_photometry_trapz()
+    test_photometry_filter_cache_interp()
     test_diagonal_residuals()
     test_mm83()
+    test_fallback_golden()
     print('all numeric tests passed')
     sys.exit(0)

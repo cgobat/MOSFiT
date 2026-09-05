@@ -171,6 +171,9 @@ class Photometry(Module):
         self._band_index_cache = {}
         self._warned_mismatch = False
         self._zps = np.full(self._n_bands, 0.0)
+        self._trans_on_sample = None
+        self._area_on_sample = None
+        self._filter_sample_id = None
 
         for i, band in enumerate(self._unique_bands):
             self._band_xunits[i] = band.get('xunit', 'Angstrom')
@@ -433,6 +436,40 @@ class Photometry(Module):
 
         if self._pool.is_master():
             prt.message('band_load_complete', inline=True)
+        self._filter_sample_id = None
+        self._trans_on_sample = None
+        self._area_on_sample = None
+
+    def _ensure_filter_sample_cache(self, sample_wavelengths):
+        """Interpolate filter curves onto ``sample_wavelengths`` once.
+
+        Sample grids and native filter curves are fixed after setup; only the
+        SED values change between likelihood / generative draws.
+        """
+        sid = id(sample_wavelengths)
+        n = len(sample_wavelengths)
+        if (getattr(self, '_filter_sample_id', None) == sid and
+                getattr(self, '_trans_on_sample', None) is not None and
+                len(self._trans_on_sample) == n):
+            return
+        trans_on = [None] * n
+        area_on = [None] * n
+        for bi in range(n):
+            wavs = np.asarray(sample_wavelengths[bi], dtype=float)
+            bw = np.asarray(self._band_wavelengths[bi], dtype=float)
+            if bw.size == 0:
+                continue
+            trans = self._transmissions[bi]
+            if len(trans):
+                trans_on[bi] = np.interp(
+                    wavs, bw, np.asarray(trans, dtype=float))
+            areas = self._band_areas[bi]
+            if len(areas):
+                area_on[bi] = np.interp(
+                    wavs, bw, np.asarray(areas, dtype=float))
+        self._trans_on_sample = trans_on
+        self._area_on_sample = area_on
+        self._filter_sample_id = sid
 
     def find_band_index(
             self, band, telescope='', instrument='', mode='', bandset='',
@@ -527,6 +564,7 @@ class Photometry(Module):
         seds_in = kwargs['seds']
         sample_wavelengths = kwargs['sample_wavelengths']
         frequencies = np.asarray(self._frequencies)
+        self._ensure_filter_sample_cache(sample_wavelengths)
 
         freq_rows = (band_indices < 0) & (band_indices != BOL_BAND_INDEX)
         if np.any(freq_rows):
@@ -551,9 +589,7 @@ class Photometry(Module):
             if np.any(mag_rows):
                 idx = np.flatnonzero(mag_rows)
                 offsets[idx] = self._band_offsets[bi]
-                trans = np.interp(
-                    wavs, self._band_wavelengths[bi],
-                    self._transmissions[bi])
+                trans = self._trans_on_sample[bi]
                 sed_block = np.stack([np.asarray(seds_in[li], dtype=float)
                                       for li in idx])
                 yvals = trans * sed_block / zp1
@@ -562,9 +598,7 @@ class Photometry(Module):
 
             if np.any(cr_rows):
                 idx = np.flatnonzero(cr_rows)
-                areas = np.interp(
-                    wavs, self._band_wavelengths[bi],
-                    self._band_areas[bi])
+                areas = self._area_on_sample[bi]
                 sed_block = np.stack([np.asarray(seds_in[li], dtype=float)
                                       for li in idx])
                 yvals = areas * sed_block / zp1 / (
