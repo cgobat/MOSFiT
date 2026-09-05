@@ -1153,7 +1153,6 @@ dependencies = [
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "seaborn" },
     { name = "six" },
-    { name = "torch" },
 ]
 
 [package.optional-dependencies]
@@ -1167,6 +1166,9 @@ docs = [
 ]
 mpi = [
     { name = "mpi4py" },
+]
+sedona = [
+    { name = "torch" },
 ]
 
 [package.metadata]
@@ -1194,10 +1196,10 @@ requires-dist = [
     { name = "sphinx-automodapi", marker = "extra == 'docs'" },
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = ">=2.0" },
     { name = "sphinxcontrib-autoprogram", marker = "extra == 'docs'" },
-    { name = "torch" },
+    { name = "torch", marker = "extra == 'sedona'" },
     { name = "tqdm", marker = "extra == 'docs'" },
 ]
-provides-extras = ["docs", "mpi"]
+provides-extras = ["docs", "mpi", "sedona"]
 
 [[package]]
 name = "mpi4py"

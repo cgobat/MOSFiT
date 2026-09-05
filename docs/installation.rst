@@ -65,3 +65,13 @@ MPI support is optional (``mpi4py`` needs a system MPI library):
 .. code-block:: bash
 
     uv sync --extra mpi
+
+The SESN SEDONA emulator (``sesn_sedona``) needs PyTorch, which is an
+optional extra:
+
+.. code-block:: bash
+
+    uv sync --extra sedona
+
+For a published pip install, use ``pip install 'mosfit[sedona]'``. Default
+models that do not use this SED do not require PyTorch.
