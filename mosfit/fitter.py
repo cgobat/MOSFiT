@@ -30,7 +30,7 @@ from mosfit.utils import (all_to_list, entabbed_json_dump, entabbed_json_dumps,
                           write_chain_hdf5, write_json_payload,
                           write_walkers_hdf5)
 
-from .model import Model
+from .model import Model, ensure_cwd_on_sys_path
 
 warnings.filterwarnings("ignore")
 
@@ -99,6 +99,7 @@ def attach_likelihood_pool(pool, max_cores, model_obj, method=None):
     ncores = 1 if max_cores is None else int(max_cores)
     if ncores <= 1:
         return pool if pool is not None else SerialPool()
+    ensure_cwd_on_sys_path()
     return LocalProcessPool(
         processes=ncores,
         initializer=_init_likelihood_worker,
@@ -190,6 +191,11 @@ class Fitter(object):
             except ImportError:
                 pass
 
+    def _bind_max_cores(self, max_cores):
+        """Apply ``fit_events`` ``max_cores``; ``None`` keeps the constructor value."""
+        if max_cores is not None:
+            self._max_cores = int(max_cores)
+
     def fit_events(self,
                    events=[],
                    models=[],
@@ -242,7 +248,7 @@ class Fitter(object):
                    guess=True,
                    method='dynesty',
                    seed=None,
-                   max_cores=1,
+                   max_cores=None,
                    **kwargs):
         """Fit a list of events with a list of models."""
         global model
@@ -250,7 +256,7 @@ class Fitter(object):
             start_time = time.time()
 
         self._seed = seed
-        self._max_cores = 1 if max_cores is None else int(max_cores)
+        self._bind_max_cores(max_cores)
         if seed is not None:
             np.random.seed(seed)
 

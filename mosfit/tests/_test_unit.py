@@ -208,6 +208,14 @@ if __name__ == '__main__':
     assert _version_triple('0.5.0.post1') == (0, 5, 0)
     assert _version_triple('0.4.9') < _ASTROCATS_MIN_VERSION
     assert _version_triple('0.5.0') >= _ASTROCATS_MIN_VERSION
+    from mosfit.fitter import Fitter
+    fitter_cores = Fitter(
+        max_cores=10, test=True, quiet=True, exit_on_prompt=True)
+    assert fitter_cores._max_cores == 10
+    fitter_cores._bind_max_cores(None)
+    assert fitter_cores._max_cores == 10
+    fitter_cores._bind_max_cores(4)
+    assert fitter_cores._max_cores == 4
     args = parser.parse_args(['-m', 'exppow', '-i', '1', '--quiet',
                               '--no-copy-at-launch'])
     assert args.models == 'exppow'

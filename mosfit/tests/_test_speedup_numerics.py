@@ -578,6 +578,54 @@ def test_viscous_loader_name_is_importable():
     print('Viscous loader module name is importable')
 
 
+def test_cwd_override_module_is_importable():
+    """CWD module overrides must pickle under a path spawn workers can import."""
+    import importlib
+    import pickle
+    import shutil
+    import tempfile
+    from mosfit.model import (
+        _is_cwd_override, ensure_cwd_on_sys_path, task_module_qualname)
+
+    kinds = 'transforms'
+    leaf = 'cwdspawnprobe'
+    pkg = os.path.join(
+        os.path.dirname(importlib.import_module(
+            'mosfit.modules.transforms.viscous').__file__),
+        leaf + '.py')
+    tmp = tempfile.mkdtemp()
+    old_cwd = os.getcwd()
+    old_path = list(sys.path)
+    extra_keys = []
+    try:
+        os.chdir(tmp)
+        os.makedirs(os.path.join('modules', kinds))
+        path = os.path.join('modules', kinds, leaf + '.py')
+        with open(path, 'w') as f:
+            f.write('class Probe(object):\n    marker = 17\n')
+        assert _is_cwd_override(path, pkg)
+        ensure_cwd_on_sys_path()
+        name = task_module_qualname(kinds, leaf, from_cwd=True)
+        assert name == 'modules.transforms.cwdspawnprobe'
+        extra_keys = [
+            k for k in ('modules', 'modules.transforms', name)
+            if k not in sys.modules]
+        mod = importlib.import_module(name)
+        blob = pickle.dumps(mod.Probe)
+        for key in ('modules.transforms.cwdspawnprobe',
+                    'modules.transforms', 'modules'):
+            sys.modules.pop(key, None)
+        cls = pickle.loads(blob)
+        assert cls.marker == 17
+    finally:
+        os.chdir(old_cwd)
+        sys.path[:] = old_path
+        for key in extra_keys:
+            sys.modules.pop(key, None)
+        shutil.rmtree(tmp, ignore_errors=True)
+    print('CWD override module name is importable')
+
+
 if __name__ == '__main__':
     test_import_no_torch()
     test_blackbody_matches_serial()
@@ -588,5 +636,6 @@ if __name__ == '__main__':
     test_fallback_golden()
     test_viscous_matches_interp1d()
     test_viscous_loader_name_is_importable()
+    test_cwd_override_module_is_importable()
     print('all numeric tests passed')
     sys.exit(0)
