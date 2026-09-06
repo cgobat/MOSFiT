@@ -112,9 +112,10 @@ class Photometry(Module):
 
         self._dir_path = os.path.dirname(os.path.realpath(__file__))
         self._filter_run_path = os.path.join('modules', 'observables')
+        # SVO downloads are cached under the process CWD. Do not mkdir in the
+        # installed package tree; site-packages is often read-only.
         os.makedirs(
             os.path.join(self._filter_run_path, 'filters'), exist_ok=True)
-        os.makedirs(os.path.join(self._dir_path, 'filters'), exist_ok=True)
 
         band_list = []
 

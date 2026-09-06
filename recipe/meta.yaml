@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/mosfit-{{ version }}.tar.gz
-  sha256: # replace with the PyPI sdist hash after the GitHub/PyPI release
+  sha256: replace-with-pypi-sdist-sha256
 
 build:
   number: 0

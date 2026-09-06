@@ -201,7 +201,13 @@ if __name__ == '__main__':
     help_txt = parser.format_help()
     assert 'mosfit' in help_txt.lower() or 'Fit astrophysical' in help_txt
     from mosfit import __version__ as mosfit_version
+    from mosfit import _ASTROCATS_MIN_VERSION, _version_triple
     assert mosfit_version.startswith('2.')
+    assert _version_triple('0.5.0') == (0, 5, 0)
+    assert _version_triple('0.5.0rc1') == (0, 5, 0)
+    assert _version_triple('0.5.0.post1') == (0, 5, 0)
+    assert _version_triple('0.4.9') < _ASTROCATS_MIN_VERSION
+    assert _version_triple('0.5.0') >= _ASTROCATS_MIN_VERSION
     args = parser.parse_args(['-m', 'exppow', '-i', '1', '--quiet',
                               '--no-copy-at-launch'])
     assert args.models == 'exppow'

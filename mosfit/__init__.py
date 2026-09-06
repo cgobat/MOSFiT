@@ -1,5 +1,6 @@
 """MOSFiT: Modular light curve fitting software."""
 import os
+import re
 
 import astrocats
 
@@ -30,16 +31,17 @@ __license__ = 'MIT'
 # Check astrocats version for schema compatibility.
 # Keep this floor in sync with the astrocats pin in pyproject.toml.
 _ASTROCATS_MIN_VERSION = (0, 5, 0)
-right_astrocats = True
-vparts = astrocats.__version__.split('.')
+
+
+def _version_triple(version):
+    """Leading X.Y.Z integers from a PEP 440 version string."""
+    nums = [int(p) for p in re.findall(r'\d+', version.split('+')[0])[:3]]
+    nums.extend([0] * (3 - len(nums)))
+    return tuple(nums[:3])
+
+
 vneed = [str(part) for part in _ASTROCATS_MIN_VERSION]
-if int(vparts[0]) < _ASTROCATS_MIN_VERSION[0]:
-    right_astrocats = False
-elif int(vparts[1]) < _ASTROCATS_MIN_VERSION[1]:
-    right_astrocats = False
-elif int(vparts[2]) < _ASTROCATS_MIN_VERSION[2]:
-    right_astrocats = False
-if not right_astrocats:
+if _version_triple(astrocats.__version__) < _ASTROCATS_MIN_VERSION:
     raise ImportError(
         'Installed `astrocats` package is out of date for this version of '
         'MOSFiT, please upgrade your `astrocats` install to a version >= `' +
